@@ -15,6 +15,9 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
   }
 
   spawn(x, y, config) {
+    this.shockwaveTimer?.remove(false);
+    this.shockwaveTimer = null;
+
     this.name = config.name;
     this.moveSpeed = config.speed;
     this.maxHealth = config.maxHealth;
@@ -37,7 +40,6 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     this.dashAngle = 0;
     this.dashChargeEndAt = 0;
     this.dashEndAt = 0;
-    this.pendingShockwaveAt = 0;
     this.nextDashAt = this.scene.time.now + 1800;
     this.nextBurstAt = this.scene.time.now + 2600;
     this.state = 'idle';
@@ -80,20 +82,8 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
 
     if (this.state === 'dashing') {
       if (time >= this.dashEndAt) {
-        this.state = 'recovering';
-        this.setVelocity(0, 0);
-      }
-
-      return;
-    }
-
-    if (this.state === 'recovering') {
-      this.setVelocity(0, 0);
-
-      if (time >= this.pendingShockwaveAt) {
-        this.scene.triggerBossShockwave(this);
-        this.pendingShockwaveAt = 0;
         this.state = 'idle';
+        this.setVelocity(0, 0);
       }
 
       return;
@@ -125,9 +115,19 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     this.scene.hideBossDashTelegraph();
     this.state = 'dashing';
     this.dashEndAt = time + this.dashDuration;
-    this.pendingShockwaveAt = this.dashEndAt + this.shockwaveDelay;
     this.nextDashAt = time + this.dashCooldown;
-    this.nextBurstAt = Math.max(this.nextBurstAt, this.pendingShockwaveAt + 1000);
+    this.nextBurstAt = Math.max(this.nextBurstAt, this.dashEndAt + this.shockwaveDelay + 1000);
+    this.shockwaveTimer?.remove(false);
+    this.shockwaveTimer = this.scene.time.delayedCall(
+      this.dashDuration + this.shockwaveDelay,
+      () => {
+        if (!this.active) {
+          return;
+        }
+
+        this.scene.triggerBossShockwave(this);
+      }
+    );
     this.scene.physics.velocityFromRotation(this.dashAngle, this.dashSpeed, this.body.velocity);
   }
 
@@ -148,6 +148,8 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
   }
 
   deactivate() {
+    this.shockwaveTimer?.remove(false);
+    this.shockwaveTimer = null;
     this.scene.hideBossDashTelegraph();
     this.state = 'idle';
     this.slowMultiplier = 1;
@@ -155,7 +157,6 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     this.dashAngle = 0;
     this.dashChargeEndAt = 0;
     this.dashEndAt = 0;
-    this.pendingShockwaveAt = 0;
     this.disableBody(true, true);
     this.setVelocity(0, 0);
     this.setTint(this.baseTint ?? 0xffffff);

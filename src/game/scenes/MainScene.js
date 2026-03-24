@@ -51,13 +51,11 @@ export class MainScene extends Phaser.Scene {
     this.bossConfig = BOSS_TYPE;
     this.nextBossAt = BOSS_WAVE_CONFIG.firstSpawnAt;
 
-    this.physics.world.setBounds(0, 0, this.worldSize.width, this.worldSize.height);
-    this.cameras.main.setBounds(0, 0, this.worldSize.width, this.worldSize.height);
 
     this.createArena();
 
-    const spawnX = this.worldSize.width / 2;
-    const spawnY = this.worldSize.height / 2;
+    const spawnX = 0;
+    const spawnY = 0;
 
     this.player = new Player(this, spawnX, spawnY);
 
@@ -74,9 +72,9 @@ export class MainScene extends Phaser.Scene {
       classType: Bullet,
       maxSize: 180
     });
-    this.experienceGems = this.physics.add.group({
+    this.experienceGems = this.add.group({
       classType: ExperienceGem,
-      maxSize: 180
+      maxSize: 260
     });
     this.orbitBlades = this.physics.add.group({
       classType: OrbitingBlade,
@@ -125,14 +123,6 @@ export class MainScene extends Phaser.Scene {
 
     this.physics.add.overlap(
       this.player,
-      this.experienceGems,
-      this.handlePlayerCollectGem,
-      undefined,
-      this
-    );
-
-    this.physics.add.overlap(
-      this.player,
       this.enemies,
       this.handleEnemyHitPlayer,
       undefined,
@@ -172,6 +162,7 @@ export class MainScene extends Phaser.Scene {
     }
 
     this.player.update();
+    this.updateArenaBackground();
 
     this.enemies.children.iterate((enemy) => {
       if (enemy?.active) {
@@ -195,6 +186,7 @@ export class MainScene extends Phaser.Scene {
   shutdown() {
     this.game.events.off('virtual-joystick-move', this.handleVirtualJoystick, this);
     this.game.events.off('toggle-pause', this.togglePause, this);
+    this.scale.off('resize', this.handleResize, this);
     this.hideBossDashTelegraph();
   }
 
@@ -237,28 +229,81 @@ export class MainScene extends Phaser.Scene {
   }
 
   createArena() {
-    const graphics = this.add.graphics();
-    graphics.fillStyle(0x0b1b29, 1);
-    graphics.fillRect(0, 0, this.worldSize.width, this.worldSize.height);
+    if (!this.textures.exists('arena_floor_tile')) {
+      const floorGraphics = this.make.graphics({ x: 0, y: 0, add: false });
+      floorGraphics.fillStyle(0x0b1b29, 1);
+      floorGraphics.fillRect(0, 0, 160, 160);
+      floorGraphics.lineStyle(1, 0x16384f, 0.65);
 
-    graphics.lineStyle(1, 0x16384f, 0.65);
+      for (let offset = 0; offset <= 160; offset += 80) {
+        floorGraphics.lineBetween(offset, 0, offset, 160);
+        floorGraphics.lineBetween(0, offset, 160, offset);
+      }
 
-    for (let x = 0; x <= this.worldSize.width; x += 80) {
-      graphics.lineBetween(x, 0, x, this.worldSize.height);
+      floorGraphics.generateTexture('arena_floor_tile', 160, 160);
+      floorGraphics.destroy();
     }
 
-    for (let y = 0; y <= this.worldSize.height; y += 80) {
-      graphics.lineBetween(0, y, this.worldSize.width, y);
+    if (!this.textures.exists('arena_star_tile')) {
+      const starGraphics = this.make.graphics({ x: 0, y: 0, add: false });
+      starGraphics.fillStyle(0x000000, 0);
+      starGraphics.fillRect(0, 0, 320, 320);
+      starGraphics.fillStyle(0x12324a, 0.8);
+
+      for (let i = 0; i < 14; i += 1) {
+        const starX = Phaser.Math.Between(18, 302);
+        const starY = Phaser.Math.Between(18, 302);
+        const radius = Phaser.Math.Between(2, 5);
+        starGraphics.fillCircle(starX, starY, radius);
+      }
+
+      starGraphics.generateTexture('arena_star_tile', 320, 320);
+      starGraphics.destroy();
     }
 
-    graphics.fillStyle(0x12324a, 0.8);
+    const { width, height } = this.scale.gameSize;
+    this.arenaBackground = this.add.tileSprite(0, 0, width, height, 'arena_floor_tile');
+    this.arenaBackground.setOrigin(0);
+    this.arenaBackground.setScrollFactor(0);
+    this.arenaBackground.setDepth(-20);
 
-    for (let i = 0; i < 40; i += 1) {
-      const starX = Phaser.Math.Between(30, this.worldSize.width - 30);
-      const starY = Phaser.Math.Between(30, this.worldSize.height - 30);
-      const radius = Phaser.Math.Between(2, 6);
-      graphics.fillCircle(starX, starY, radius);
+    this.arenaStars = this.add.tileSprite(0, 0, width, height, 'arena_star_tile');
+    this.arenaStars.setOrigin(0);
+    this.arenaStars.setScrollFactor(0);
+    this.arenaStars.setDepth(-19);
+    this.arenaStars.setAlpha(0.95);
+
+    this.scale.on('resize', this.handleResize, this);
+    this.handleResize(this.scale.gameSize);
+    this.updateArenaBackground();
+  }
+
+  handleResize(gameSize) {
+    if (!gameSize) {
+      return;
     }
+
+    if (this.arenaBackground) {
+      this.arenaBackground.setSize(gameSize.width, gameSize.height);
+      this.arenaBackground.setDisplaySize(gameSize.width, gameSize.height);
+    }
+
+    if (this.arenaStars) {
+      this.arenaStars.setSize(gameSize.width, gameSize.height);
+      this.arenaStars.setDisplaySize(gameSize.width, gameSize.height);
+    }
+  }
+
+  updateArenaBackground() {
+    if (!this.arenaBackground || !this.arenaStars) {
+      return;
+    }
+
+    const camera = this.cameras.main;
+    this.arenaBackground.tilePositionX = camera.scrollX;
+    this.arenaBackground.tilePositionY = camera.scrollY;
+    this.arenaStars.tilePositionX = camera.scrollX * 0.35;
+    this.arenaStars.tilePositionY = camera.scrollY * 0.35;
   }
 
   recalculateDerivedStats() {
@@ -290,7 +335,9 @@ export class MainScene extends Phaser.Scene {
 
     this.pickupRadius = this.basePlayerStats.pickupRadius + this.derivedStats.pickupRadiusBonus;
     this.pickupRadiusSq = this.pickupRadius * this.pickupRadius;
-    this.autoCollectRadiusSq = 34 * 34;
+    this.autoCollectRadius = 18;
+    this.gemUpdateRadius = Math.max(220, this.pickupRadius + 180);
+    this.gemUpdateRadiusSq = this.gemUpdateRadius * this.gemUpdateRadius;
   }
 
   getPassiveStats(key) {
@@ -416,8 +463,8 @@ export class MainScene extends Phaser.Scene {
     const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
 
     return {
-      x: Phaser.Math.Clamp(this.player.x + Math.cos(angle) * spawnDistance, 48, this.worldSize.width - 48),
-      y: Phaser.Math.Clamp(this.player.y + Math.sin(angle) * spawnDistance, 48, this.worldSize.height - 48)
+      x: this.player.x + Math.cos(angle) * spawnDistance,
+      y: this.player.y + Math.sin(angle) * spawnDistance
     };
   }
 
@@ -544,16 +591,8 @@ export class MainScene extends Phaser.Scene {
     const spawnDistance = Phaser.Math.Between(320, 460);
     const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
 
-    const x = Phaser.Math.Clamp(
-      this.player.x + Math.cos(angle) * spawnDistance,
-      20,
-      this.worldSize.width - 20
-    );
-    const y = Phaser.Math.Clamp(
-      this.player.y + Math.sin(angle) * spawnDistance,
-      20,
-      this.worldSize.height - 20
-    );
+    const x = this.player.x + Math.cos(angle) * spawnDistance;
+    const y = this.player.y + Math.sin(angle) * spawnDistance;
 
     const enemyType = this.chooseEnemyType();
     let enemy = this.enemies.getFirstDead(false);
@@ -630,13 +669,12 @@ export class MainScene extends Phaser.Scene {
   }
 
   fireArcBolt() {
-    const target = this.findNearestEnemy();
+    const stats = this.getWeaponStats('arc_bolt');
+    const target = this.findNearestEnemy(stats.range);
 
     if (!target) {
       return;
     }
-
-    const stats = this.getWeaponStats('arc_bolt');
     const baseAngle = Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y);
     this.spawnProjectileSpread({
       ...stats,
@@ -646,13 +684,12 @@ export class MainScene extends Phaser.Scene {
   }
 
   fireCometLance() {
-    const target = this.findNearestEnemy();
+    const stats = this.getWeaponStats('comet_lance');
+    const target = this.findNearestEnemy(stats.range);
 
     if (!target) {
       return;
     }
-
-    const stats = this.getWeaponStats('comet_lance');
     const baseAngle = Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y);
     this.spawnProjectileSpread({
       ...stats,
@@ -667,13 +704,12 @@ export class MainScene extends Phaser.Scene {
   }
 
   fireNovaBloom() {
-    const target = this.findNearestEnemy();
+    const stats = this.getWeaponStats('nova_bloom');
+    const target = this.findNearestEnemy(stats.range);
 
     if (!target) {
       return;
     }
-
-    const stats = this.getWeaponStats('nova_bloom');
     const baseAngle = Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y);
     this.spawnProjectileSpread({
       ...stats,
@@ -786,40 +822,47 @@ export class MainScene extends Phaser.Scene {
     const playerX = this.player.x;
     const playerY = this.player.y;
     const pickupRadiusSq = this.pickupRadiusSq;
-    const autoCollectRadiusSq = this.autoCollectRadiusSq;
     const pullSpeed = this.derivedStats.gemPullSpeed;
+    const deltaSeconds = Math.min(0.05, this.game.loop.delta / 1000);
+    const gemUpdateRadiusSq = this.gemUpdateRadiusSq;
 
     this.experienceGems.children.iterate((gem) => {
       if (!gem?.active) {
         return;
       }
 
-      const dx = gem.x - playerX;
-      const dy = gem.y - playerY;
+      const dx = playerX - gem.x;
+      const dy = playerY - gem.y;
       const distanceSq = dx * dx + dy * dy;
+      const collectRadius = this.autoCollectRadius + (gem.collectRadius ?? 0);
 
-      if (distanceSq <= autoCollectRadiusSq) {
+      if (distanceSq <= collectRadius * collectRadius) {
         this.handlePlayerCollectGem(this.player, gem);
         return;
       }
 
-      if (pickupRadiusSq > autoCollectRadiusSq && distanceSq <= pickupRadiusSq) {
+      if (distanceSq > gemUpdateRadiusSq) {
+        gem.stopMotion();
+        return;
+      }
+
+      if (pickupRadiusSq > 0 && distanceSq <= pickupRadiusSq) {
         const distance = Math.max(1, Math.sqrt(distanceSq));
         const pullRatio = 1 - distanceSq / pickupRadiusSq;
         const speed = pullSpeed * (0.95 + pullRatio * 1.8);
-        gem.body.velocity.set((-dx / distance) * speed, (-dy / distance) * speed);
+        gem.pullToward(dx / distance, dy / distance, speed, deltaSeconds);
       } else {
-        gem.setVelocity(0, 0);
+        gem.stopMotion();
       }
     });
   }
 
-
-  findNearestEnemy() {
+  findNearestEnemy(maxRange = Number.POSITIVE_INFINITY) {
     let nearestTarget = null;
     let nearestDistanceSq = Number.POSITIVE_INFINITY;
     const playerX = this.player.x;
     const playerY = this.player.y;
+    const maxRangeSq = Number.isFinite(maxRange) ? maxRange * maxRange : Number.POSITIVE_INFINITY;
 
     const inspectTarget = (target) => {
       if (!target?.active) {
@@ -829,6 +872,10 @@ export class MainScene extends Phaser.Scene {
       const dx = target.x - playerX;
       const dy = target.y - playerY;
       const distanceSq = dx * dx + dy * dy;
+
+      if (distanceSq > maxRangeSq) {
+        return;
+      }
 
       if (distanceSq < nearestDistanceSq) {
         nearestDistanceSq = distanceSq;
@@ -1154,20 +1201,20 @@ export class MainScene extends Phaser.Scene {
     const intro = isUnlock ? `${def.unlockDescription} ` : '';
 
     if (def.type === 'auto') {
-      return `${intro}傷害 ${stats.damage}，冷卻 ${stats.cooldown}ms，發射 ${stats.projectiles} 枚飛矢。`;
+      return `${intro}傷害 ${stats.damage}，射程 ${stats.range}，冷卻 ${stats.cooldown}ms，發射 ${stats.projectiles} 枚飛矢。`;
     }
 
     if (def.type === 'orbit') {
-      return `${intro}${stats.count} 枚飛刃，傷害 ${stats.damage}，環繞半徑 ${stats.radius}。`;
+      return `${intro}生成 ${stats.count} 枚飛刃，傷害 ${stats.damage}，環繞半徑 ${stats.radius}。`;
     }
 
     if (def.type === 'pierce') {
       const slowPercent = Math.round((1 - stats.slowMultiplier) * 100);
       const freezeText = stats.freezeDuration > 0 ? `，冰凍 ${Math.round(stats.freezeDuration / 100) / 10} 秒` : '';
-      return `${intro}傷害 ${stats.damage}，緩速 ${slowPercent}%，持續 ${Math.round(stats.slowDuration / 100) / 10} 秒${freezeText}，發射 ${stats.projectiles} 支冰箭。`;
+      return `${intro}傷害 ${stats.damage}，射程 ${stats.range}，緩速 ${slowPercent}%，持續 ${Math.round(stats.slowDuration / 100) / 10} 秒${freezeText}，發射 ${stats.projectiles} 枚冰箭。`;
     }
 
-    return `${intro}傷害 ${stats.damage}，爆炸半徑 ${stats.radius}，發射 ${stats.projectiles} 顆種子。`;
+    return `${intro}傷害 ${stats.damage}，射程 ${stats.range}，爆炸半徑 ${stats.radius}，發射 ${stats.projectiles} 顆種子。`;
   }
 
   describePassiveLevel(key, level) {
@@ -1182,7 +1229,7 @@ export class MainScene extends Phaser.Scene {
     }
 
     if (key === 'projectile_count') {
-      return `相容武器額外增加 ${stats.projectileBonus} 個投射物。`;
+      return `相容武器額外增加 ${stats.projectileBonus} 枚投射物。`;
     }
 
     if (key === 'move_speed') {
@@ -1195,6 +1242,7 @@ export class MainScene extends Phaser.Scene {
 
     return `最大生命 +${stats.maxHealthBonus}，立即回復 ${stats.healOnGain} 點生命。`;
   }
+
   applyUpgrade(upgradeId) {
     const upgrade = this.currentUpgradeChoices.find((choice) => choice.id === upgradeId);
 
@@ -1211,9 +1259,6 @@ export class MainScene extends Phaser.Scene {
       const previousMaxHealth = this.player.maxHealth;
       this.passiveLevels[upgrade.key] = upgrade.nextLevel;
       this.recalculateDerivedStats();
-    this.bossDashTelegraph = this.add.graphics();
-    this.bossDashTelegraph.setDepth(2);
-    this.bossDashTelegraph.setVisible(false);
 
       if (upgrade.key === 'max_health') {
         const passiveStats = getPassiveLevelData(upgrade.key, upgrade.nextLevel);

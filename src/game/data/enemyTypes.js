@@ -1,4 +1,4 @@
-export const ENEMY_TYPES = {
+﻿export const ENEMY_TYPES = {
   normal: {
     key: 'normal',
     name: 'Wisp Drifter',
@@ -41,6 +41,7 @@ export const BOSS_TYPE = {
   tint: 0x6dd3ff,
   scale: 2.5,
   dashSpeed: 340,
+  dashChargeDuration: 650,
   dashDuration: 700,
   dashCooldown: 5200,
   shockwaveDelay: 520,

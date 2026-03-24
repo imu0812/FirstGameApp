@@ -7,11 +7,11 @@ export const WEAPON_DEFS = {
     maxLevel: 5,
     unlockDescription: '自動朝最近的敵人發射能量飛矢。',
     levels: [
-      { damage: 2, cooldown: 680, projectiles: 1, speed: 430, lifeSpan: 920, spread: 0.08, pierce: 0, tint: 0xffe38b, scale: 1 },
-      { damage: 3, cooldown: 590, projectiles: 1, speed: 450, lifeSpan: 960, spread: 0.08, pierce: 0, tint: 0xffe38b, scale: 1 },
-      { damage: 3, cooldown: 530, projectiles: 2, speed: 470, lifeSpan: 1000, spread: 0.16, pierce: 0, tint: 0xfff0a8, scale: 1 },
-      { damage: 4, cooldown: 470, projectiles: 2, speed: 490, lifeSpan: 1060, spread: 0.18, pierce: 1, tint: 0xfff4bc, scale: 1.05 },
-      { damage: 5, cooldown: 410, projectiles: 3, speed: 520, lifeSpan: 1120, spread: 0.24, pierce: 1, tint: 0xfff7d0, scale: 1.08 }
+      { range: 300, damage: 2, cooldown: 680, projectiles: 1, speed: 430, lifeSpan: 920, spread: 0.08, pierce: 0, tint: 0xffe38b, scale: 1 },
+      { range: 315, damage: 3, cooldown: 590, projectiles: 1, speed: 450, lifeSpan: 960, spread: 0.08, pierce: 0, tint: 0xffe38b, scale: 1 },
+      { range: 330, damage: 3, cooldown: 530, projectiles: 2, speed: 470, lifeSpan: 1000, spread: 0.16, pierce: 0, tint: 0xfff0a8, scale: 1 },
+      { range: 345, damage: 4, cooldown: 470, projectiles: 2, speed: 490, lifeSpan: 1060, spread: 0.18, pierce: 1, tint: 0xfff4bc, scale: 1.05 },
+      { range: 360, damage: 5, cooldown: 410, projectiles: 3, speed: 520, lifeSpan: 1120, spread: 0.24, pierce: 1, tint: 0xfff7d0, scale: 1.08 }
     ]
   },
   halo_disc: {
@@ -37,11 +37,11 @@ export const WEAPON_DEFS = {
     maxLevel: 5,
     unlockDescription: '射出寒霜箭矢，命中後使敵人減速，後期可短暫冰凍。',
     levels: [
-      { damage: 2, cooldown: 1380, projectiles: 1, speed: 520, lifeSpan: 1160, spread: 0.03, pierce: 1, slowMultiplier: 0.7, slowDuration: 1400, freezeDuration: 0, tint: 0x8ddfff, scale: 1.02 },
-      { damage: 3, cooldown: 1260, projectiles: 1, speed: 540, lifeSpan: 1200, spread: 0.03, pierce: 1, slowMultiplier: 0.62, slowDuration: 1600, freezeDuration: 0, tint: 0x97e8ff, scale: 1.04 },
-      { damage: 3, cooldown: 1140, projectiles: 2, speed: 560, lifeSpan: 1240, spread: 0.11, pierce: 2, slowMultiplier: 0.55, slowDuration: 1800, freezeDuration: 0, tint: 0xaeeeff, scale: 1.06 },
-      { damage: 4, cooldown: 1020, projectiles: 2, speed: 575, lifeSpan: 1280, spread: 0.13, pierce: 2, slowMultiplier: 0.48, slowDuration: 2000, freezeDuration: 900, tint: 0xc5f4ff, scale: 1.08 },
-      { damage: 5, cooldown: 900, projectiles: 3, speed: 590, lifeSpan: 1320, spread: 0.18, pierce: 3, slowMultiplier: 0.4, slowDuration: 2200, freezeDuration: 1500, tint: 0xe1fbff, scale: 1.12 }
+      { range: 360, damage: 2, cooldown: 1380, projectiles: 1, speed: 520, lifeSpan: 1160, spread: 0.03, pierce: 1, slowMultiplier: 0.7, slowDuration: 1400, freezeDuration: 0, tint: 0x8ddfff, scale: 1.02 },
+      { range: 380, damage: 3, cooldown: 1260, projectiles: 1, speed: 540, lifeSpan: 1200, spread: 0.03, pierce: 1, slowMultiplier: 0.62, slowDuration: 1600, freezeDuration: 0, tint: 0x97e8ff, scale: 1.04 },
+      { range: 400, damage: 3, cooldown: 1140, projectiles: 2, speed: 560, lifeSpan: 1240, spread: 0.11, pierce: 2, slowMultiplier: 0.55, slowDuration: 1800, freezeDuration: 0, tint: 0xaeeeff, scale: 1.06 },
+      { range: 420, damage: 4, cooldown: 1020, projectiles: 2, speed: 575, lifeSpan: 1280, spread: 0.13, pierce: 2, slowMultiplier: 0.48, slowDuration: 2000, freezeDuration: 900, tint: 0xc5f4ff, scale: 1.08 },
+      { range: 440, damage: 5, cooldown: 900, projectiles: 3, speed: 590, lifeSpan: 1320, spread: 0.18, pierce: 3, slowMultiplier: 0.4, slowDuration: 2200, freezeDuration: 1500, tint: 0xe1fbff, scale: 1.12 }
     ]
   },
   nova_bloom: {
@@ -52,8 +52,8 @@ export const WEAPON_DEFS = {
     maxLevel: 5,
     unlockDescription: '射出不穩定種子，命中後引發爆炸。',
     levels: [
-      { damage: 3, cooldown: 2100, projectiles: 1, speed: 265, lifeSpan: 1100, spread: 0.04, radius: 60, tint: 0xff9e7a, scale: 0.95 },
-      { damage: 4, cooldown: 1920, projectiles: 1, speed: 275, lifeSpan: 1140, spread: 0.05, radius: 70, tint: 0xff9e7a, scale: 1 },
+      { range: 300, damage: 3, cooldown: 2100, projectiles: 1, speed: 265, lifeSpan: 1100, spread: 0.04, radius: 60, tint: 0xff9e7a, scale: 0.95 },
+      { range: 320, damage: 4, cooldown: 1920, projectiles: 1, speed: 275, lifeSpan: 1140, spread: 0.05, radius: 70, tint: 0xff9e7a, scale: 1 },
       { damage: 4, cooldown: 1760, projectiles: 2, speed: 285, lifeSpan: 1180, spread: 0.12, radius: 78, tint: 0xffb08f, scale: 1.02 },
       { damage: 5, cooldown: 1560, projectiles: 2, speed: 295, lifeSpan: 1220, spread: 0.14, radius: 90, tint: 0xffc2a6, scale: 1.06 },
       { damage: 7, cooldown: 1360, projectiles: 3, speed: 305, lifeSpan: 1260, spread: 0.2, radius: 104, tint: 0xffd7c2, scale: 1.1 }
