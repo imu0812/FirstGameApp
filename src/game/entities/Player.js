@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+﻿import Phaser from 'phaser';
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {
@@ -7,8 +7,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.moveSpeed = 220;
     this.maxHealth = 6;
     this.health = this.maxHealth;
+    this.shield = 0;
     this.invulnerabilityDuration = 750;
     this.lastDamageTime = -this.invulnerabilityDuration;
+    this.lastDamageReport = null;
     this.virtualInput = new Phaser.Math.Vector2(0, 0);
     this.moveDirection = new Phaser.Math.Vector2(0, 0);
 
@@ -76,13 +78,43 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     return time - this.lastDamageTime >= this.invulnerabilityDuration;
   }
 
+  addShield(amount) {
+    this.shield = Math.max(0, this.shield + amount);
+  }
+
   takeDamage(amount, time) {
     if (!this.canTakeDamage(time)) {
       return false;
     }
 
-    this.health = Math.max(0, this.health - amount);
     this.lastDamageTime = time;
+
+    let remainingDamage = Math.max(0, amount);
+    let shieldDamage = 0;
+    let healthDamage = 0;
+    let shieldBroken = false;
+
+    if (this.shield > 0 && remainingDamage > 0) {
+      shieldDamage = Math.min(this.shield, remainingDamage);
+      this.shield -= shieldDamage;
+      remainingDamage -= shieldDamage;
+      shieldBroken = shieldDamage > 0 && this.shield <= 0;
+    }
+
+    if (remainingDamage > 0) {
+      healthDamage = Math.min(this.health, remainingDamage);
+      this.health = Math.max(0, this.health - remainingDamage);
+    }
+
+    this.lastDamageReport = {
+      shieldDamage,
+      healthDamage,
+      shieldBroken,
+      hadShield: shieldDamage > 0,
+      healthRemaining: this.health,
+      shieldRemaining: this.shield
+    };
+
     this.updateInvulnerabilityVisual();
     return true;
   }
@@ -100,10 +132,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setPosition(x, y);
     this.setVelocity(0, 0);
     this.health = this.maxHealth;
+    this.shield = 0;
     this.lastDamageTime = -this.invulnerabilityDuration;
+    this.lastDamageReport = null;
     this.virtualInput.set(0, 0);
     this.moveDirection.set(0, 0);
     this.setAlpha(1);
   }
 }
-

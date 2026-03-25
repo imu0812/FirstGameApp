@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+﻿import Phaser from 'phaser';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -89,6 +89,27 @@ export class BootScene extends Phaser.Scene {
     graphics.strokePath();
     graphics.generateTexture('ice_shell', 36, 36);
 
+    this.createChestTexture(graphics, 'chest_bronze', 0x8c5520, 0xdca35f, 0x321506);
+    this.createChestTexture(graphics, 'chest_silver', 0x6f869a, 0xdcecff, 0x2f4252);
+    this.createChestTexture(graphics, 'chest_gold', 0xb98518, 0xffe18c, 0x5a3400);
+
     graphics.destroy();
   }
+
+  createChestTexture(graphics, key, bodyColor, trimColor, shadowColor) {
+    graphics.clear();
+    graphics.fillStyle(shadowColor, 0.9);
+    graphics.fillRoundedRect(4, 10, 28, 20, 5);
+    graphics.fillStyle(bodyColor, 1);
+    graphics.fillRoundedRect(3, 8, 28, 20, 5);
+    graphics.fillStyle(trimColor, 0.95);
+    graphics.fillRect(3, 14, 28, 4);
+    graphics.fillRect(14, 8, 6, 20);
+    graphics.fillStyle(0xfaf4dc, 0.95);
+    graphics.fillRect(14, 16, 6, 5);
+    graphics.lineStyle(2, 0xffffff, 0.28);
+    graphics.strokeRoundedRect(3, 8, 28, 20, 5);
+    graphics.generateTexture(key, 36, 36);
+  }
 }
+

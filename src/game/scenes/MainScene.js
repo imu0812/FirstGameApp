@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+﻿import Phaser from 'phaser';
 import { Player } from '../entities/Player.js';
 import { Enemy } from '../entities/Enemy.js';
 import { Boss } from '../entities/Boss.js';
@@ -6,6 +6,7 @@ import { Bullet } from '../entities/Bullet.js';
 import { BossProjectile } from '../entities/BossProjectile.js';
 import { ExperienceGem } from '../entities/ExperienceGem.js';
 import { OrbitingBlade } from '../entities/OrbitingBlade.js';
+import { Chest } from '../entities/Chest.js';
 import { BOSS_TYPE, BOSS_WAVE_CONFIG, DIFFICULTY_STAGES, ENEMY_TYPES } from '../data/enemyTypes.js';
 import {
   PASSIVE_DEFS,
@@ -13,6 +14,7 @@ import {
   getPassiveLevelData,
   getWeaponLevelData
 } from '../data/arsenal.js';
+import { CHEST_SPAWN_CONFIG, CHEST_TYPES, REWARD_TYPES, getChestSpawnCap, getChestSpawnDelay, getChestTypeKey, getGoldRewardAmount, getRewardKey } from '../data/chests.js';
 
 export class MainScene extends Phaser.Scene {
   constructor() {
@@ -50,6 +52,12 @@ export class MainScene extends Phaser.Scene {
     this.passiveLevels = {};
     this.bossConfig = BOSS_TYPE;
     this.nextBossAt = BOSS_WAVE_CONFIG.firstSpawnAt;
+    this.gold = 0;
+    this.bossSpawnGraceDuration = 6000;
+    this.spawnSuppressionStartedAt = null;
+    this.totalSpawnSuppressedMs = 0;
+    this.normalSpawnResumeAt = 0;
+    this.lastChestReward = null;
 
 
     this.createArena();
@@ -59,8 +67,10 @@ export class MainScene extends Phaser.Scene {
 
     this.player = new Player(this, spawnX, spawnY);
 
+    this.createPlayerStatusBar();
     this.recalculateDerivedStats();
     this.bossDashTelegraph = this.add.graphics();
+    this.updatePlayerStatusBar();
     this.bossDashTelegraph.setDepth(2);
     this.bossDashTelegraph.setVisible(false);
 
@@ -79,6 +89,10 @@ export class MainScene extends Phaser.Scene {
     this.orbitBlades = this.physics.add.group({
       classType: OrbitingBlade,
       maxSize: 18
+    });
+    this.chests = this.physics.add.group({
+      classType: Chest,
+      maxSize: 8
     });
     this.bosses = this.physics.add.group({
       classType: Boss,
@@ -147,6 +161,22 @@ export class MainScene extends Phaser.Scene {
       this
     );
 
+    this.physics.add.overlap(
+      this.projectiles,
+      this.chests,
+      this.handleProjectileHitChest,
+      undefined,
+      this
+    );
+
+    this.physics.add.overlap(
+      this.orbitBlades,
+      this.chests,
+      this.handleOrbitBladeHitChest,
+      undefined,
+      this
+    );
+
     this.game.events.on('virtual-joystick-move', this.handleVirtualJoystick, this);
     this.game.events.on('toggle-pause', this.togglePause, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdown, this);
@@ -154,6 +184,7 @@ export class MainScene extends Phaser.Scene {
     this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
 
     this.refreshSpawnTimer();
+    this.refreshChestTimer();
     this.syncWeaponSystems();
     this.emitStats(true);
   }
@@ -164,6 +195,7 @@ export class MainScene extends Phaser.Scene {
     }
 
     this.player.update();
+    this.updatePlayerStatusBar();
     this.updateArenaBackground();
 
     this.enemies.children.iterate((enemy) => {
@@ -180,6 +212,7 @@ export class MainScene extends Phaser.Scene {
 
     this.updateOrbitWeapons();
     this.updateGemAttraction();
+    this.updateSpawnSuppressionState();
     this.updateDifficulty();
     this.updateBossSchedule();
     this.emitStats();
@@ -189,6 +222,9 @@ export class MainScene extends Phaser.Scene {
     this.game.events.off('virtual-joystick-move', this.handleVirtualJoystick, this);
     this.game.events.off('toggle-pause', this.togglePause, this);
     this.scale.off('resize', this.handleResize, this);
+    if (this.spawnChestEvent) {
+      this.spawnChestEvent.remove(false);
+    }
     this.hideBossDashTelegraph();
   }
 
@@ -229,6 +265,101 @@ export class MainScene extends Phaser.Scene {
 
     this.player.setVirtualInput(input.x, input.y);
   }
+  createPlayerStatusBar() {
+    this.playerBarWidth = 46;
+    this.playerBarInnerWidth = this.playerBarWidth - 4;
+    this.playerBarContainer = this.add.container(this.player.x, this.player.y - 30);
+    this.playerBarContainer.setDepth(12);
+
+    this.playerBarBackground = this.add.rectangle(0, 0, this.playerBarWidth, 10, 0x071018, 0.76).setOrigin(0.5);
+    this.playerBarHpFill = this.add.rectangle(-this.playerBarInnerWidth / 2, 1.5, this.playerBarInnerWidth, 4.5, 0xff6d72, 1).setOrigin(0, 0.5);
+    this.playerBarShieldGlow = this.add.rectangle(0, -2.5, this.playerBarInnerWidth, 3, 0x7ad9ff, 0.18).setOrigin(0.5);
+    this.playerBarShieldFill = this.add.rectangle(-this.playerBarInnerWidth / 2, -2.5, this.playerBarInnerWidth, 2.5, 0x79d9ff, 1).setOrigin(0, 0.5);
+    this.playerBarFrame = this.add.rectangle(0, 0, this.playerBarWidth, 10).setOrigin(0.5).setStrokeStyle(1, 0xf4fbff, 0.45).setFillStyle(0x000000, 0);
+
+    this.playerBarContainer.add([
+      this.playerBarBackground,
+      this.playerBarHpFill,
+      this.playerBarShieldGlow,
+      this.playerBarShieldFill,
+      this.playerBarFrame
+    ]);
+  }
+
+  updatePlayerStatusBar() {
+    if (!this.playerBarContainer || !this.player?.active) {
+      return;
+    }
+
+    this.playerBarContainer.setPosition(this.player.x, this.player.y - 30);
+
+    const hpRatio = Phaser.Math.Clamp(this.player.health / Math.max(1, this.player.maxHealth), 0, 1);
+    const shieldRatio = Phaser.Math.Clamp(this.player.shield / Math.max(1, this.player.maxHealth), 0, 1);
+
+    this.playerBarHpFill.width = this.playerBarInnerWidth * hpRatio;
+    this.playerBarShieldFill.width = this.playerBarInnerWidth * shieldRatio;
+
+    const hasShield = this.player.shield > 0;
+    this.playerBarShieldFill.setVisible(hasShield);
+    this.playerBarShieldGlow.setVisible(hasShield);
+
+    if (hasShield) {
+      this.playerBarShieldGlow.setAlpha(0.12 + (Math.sin(this.time.now * 0.015) + 1) * 0.06);
+    }
+  }
+
+  handlePlayerDamageFeedback() {
+    const report = this.player?.lastDamageReport;
+
+    if (!report || !this.playerBarContainer) {
+      return;
+    }
+
+    if (report.hadShield) {
+      this.tweens.add({
+        targets: this.playerBarShieldFill,
+        alpha: 0.25,
+        duration: 70,
+        yoyo: true,
+        repeat: 1
+      });
+
+      this.tweens.add({
+        targets: this.playerBarShieldGlow,
+        alpha: 0.38,
+        duration: 120,
+        yoyo: true
+      });
+
+      if (report.shieldBroken) {
+        for (let index = 0; index < 6; index += 1) {
+          const shard = this.add.circle(
+            this.player.x + Phaser.Math.Between(-6, 6),
+            this.player.y - 30 + Phaser.Math.Between(-4, 4),
+            Phaser.Math.Between(1, 2),
+            0x9ce6ff,
+            0.9
+          );
+          shard.setDepth(13);
+          this.tweens.add({
+            targets: shard,
+            x: shard.x + Phaser.Math.Between(-18, 18),
+            y: shard.y + Phaser.Math.Between(-14, 10),
+            alpha: 0,
+            scaleX: 0.2,
+            scaleY: 0.2,
+            duration: 260,
+            ease: 'Quad.Out',
+            onComplete: () => shard.destroy()
+          });
+        }
+      }
+    }
+
+    this.updatePlayerStatusBar();
+    this.player.lastDamageReport = null;
+  }
+
 
   createArena() {
     if (!this.textures.exists('arena_floor_tile')) {
@@ -441,6 +572,7 @@ export class MainScene extends Phaser.Scene {
 
     this.currentDifficultyStage = targetStage;
     this.refreshSpawnTimer();
+    this.refreshChestTimer();
     this.emitStats(true);
   }
 
@@ -476,6 +608,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   spawnBoss() {
+    this.beginSpawnSuppression();
     const spawnPoint = this.getBossSpawnPoint();
     let boss = this.bosses.getFirstDead(false);
 
@@ -545,6 +678,7 @@ export class MainScene extends Phaser.Scene {
       const tookDamage = this.player.takeDamage(boss.shockwaveDamage, this.time.now);
 
       if (tookDamage) {
+        this.handlePlayerDamageFeedback();
         this.emitStats(true);
 
         if (this.player.health <= 0) {
@@ -573,6 +707,43 @@ export class MainScene extends Phaser.Scene {
     return (this.time.now - this.survivalStartTime) / 1000;
   }
 
+  beginSpawnSuppression(resumeAt = Number.POSITIVE_INFINITY) {
+    if (this.spawnSuppressionStartedAt === null) {
+      this.spawnSuppressionStartedAt = this.time.now;
+    }
+
+    this.normalSpawnResumeAt = resumeAt;
+  }
+
+  updateSpawnSuppressionState() {
+    if (this.spawnSuppressionStartedAt === null) {
+      return;
+    }
+
+    if (this.hasActiveBoss() || this.time.now < this.normalSpawnResumeAt) {
+      return;
+    }
+
+    this.totalSpawnSuppressedMs += this.time.now - this.spawnSuppressionStartedAt;
+    this.spawnSuppressionStartedAt = null;
+    this.normalSpawnResumeAt = 0;
+  }
+
+  isSpawnSuppressed() {
+    this.updateSpawnSuppressionState();
+    return this.spawnSuppressionStartedAt !== null;
+  }
+
+  getSpawnScalingElapsedTime() {
+    let suppressedMs = this.totalSpawnSuppressedMs;
+
+    if (this.spawnSuppressionStartedAt !== null) {
+      suppressedMs += this.time.now - this.spawnSuppressionStartedAt;
+    }
+
+    return Math.max(0, (this.time.now - this.survivalStartTime - suppressedMs) / 1000);
+  }
+
   getDifficultyStageForTime(elapsedSeconds) {
     let activeStage = this.difficultyStages[0];
 
@@ -598,12 +769,62 @@ export class MainScene extends Phaser.Scene {
     });
   }
 
-  spawnEnemyWave() {
-    if (this.isLevelingUp || this.isGameOver || this.hasActiveBoss()) {
+  refreshChestTimer() {
+    if (this.spawnChestEvent) {
+      this.spawnChestEvent.remove(false);
+    }
+
+    this.scheduleNextChestSpawn();
+  }
+
+  scheduleNextChestSpawn() {
+    if (this.spawnChestEvent) {
+      this.spawnChestEvent.remove(false);
+    }
+
+    const delay = getChestSpawnDelay(this.getElapsedTime(), this.currentDifficultyStage.stage);
+    this.spawnChestEvent = this.time.delayedCall(delay, this.trySpawnChest, [], this);
+  }
+
+  trySpawnChest() {
+    if (this.isLevelingUp || this.isGameOver || this.isPaused) {
+      this.scheduleNextChestSpawn();
       return;
     }
 
-    const elapsedSeconds = this.getElapsedTime();
+    const activeCap = Math.min(CHEST_SPAWN_CONFIG.maxActive, getChestSpawnCap(this.getElapsedTime()));
+
+    if (this.chests.countActive(true) < activeCap) {
+      const chestTypeKey = getChestTypeKey(this.getElapsedTime(), this.currentDifficultyStage.stage);
+      this.spawnChest(CHEST_TYPES[chestTypeKey]);
+    }
+
+    this.scheduleNextChestSpawn();
+  }
+
+  spawnChest(chestType) {
+    const spawnDistance = Phaser.Math.Between(CHEST_SPAWN_CONFIG.distanceMin, CHEST_SPAWN_CONFIG.distanceMax);
+    const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+    const x = this.player.x + Math.cos(angle) * spawnDistance;
+    const y = this.player.y + Math.sin(angle) * spawnDistance;
+
+    let chest = this.chests.getFirstDead(false);
+
+    if (chest) {
+      chest.spawn(x, y, chestType);
+      return;
+    }
+
+    chest = new Chest(this, x, y, chestType);
+    this.chests.add(chest);
+  }
+
+  spawnEnemyWave() {
+    if (this.isLevelingUp || this.isGameOver || this.isSpawnSuppressed()) {
+      return;
+    }
+
+    const elapsedSeconds = this.getSpawnScalingElapsedTime();
     const timeBonus = Math.min(2, Math.floor(elapsedSeconds / 60));
     const enemiesThisWave = this.currentDifficultyStage.spawnsPerWave + timeBonus;
 
@@ -1049,8 +1270,22 @@ export class MainScene extends Phaser.Scene {
       }
     };
 
+    const inspectChest = (chest) => {
+      if (!chest?.active) {
+        return;
+      }
+
+      const dx = chest.x - projectile.x;
+      const dy = chest.y - projectile.y;
+
+      if (dx * dx + dy * dy <= radiusSq) {
+        this.damageChest(chest);
+      }
+    };
+
     this.enemies.children.iterate(inspectTarget);
     this.bosses.children.iterate(inspectTarget);
+    this.chests.children.iterate(inspectChest);
 
     if (targetDied) {
       this.emitStats(true);
@@ -1123,6 +1358,7 @@ export class MainScene extends Phaser.Scene {
 
     this.hideBossDashTelegraph();
     boss.deactivate();
+    this.normalSpawnResumeAt = this.time.now + this.bossSpawnGraceDuration;
     this.bossProjectiles.children.iterate((projectile) => projectile?.disableProjectile?.());
   }
 
@@ -1138,6 +1374,7 @@ export class MainScene extends Phaser.Scene {
       return;
     }
 
+    this.handlePlayerDamageFeedback();
     this.emitStats(true);
 
     if (player.health <= 0) {
@@ -1160,6 +1397,7 @@ export class MainScene extends Phaser.Scene {
       return;
     }
 
+    this.handlePlayerDamageFeedback();
     this.knockbackVector.set(player.x - enemy.x, player.y - enemy.y);
 
     if (this.knockbackVector.lengthSq() > 0) {
@@ -1172,6 +1410,56 @@ export class MainScene extends Phaser.Scene {
     if (player.health <= 0) {
       this.triggerGameOver();
     }
+  }
+  handleProjectileHitChest(projectile, chest) {
+    if (!projectile?.active || !chest?.active) {
+      return;
+    }
+
+    if (projectile.explosionRadius > 0) {
+      this.handleProjectileExplosion(projectile);
+      projectile.disableBullet();
+      return;
+    }
+
+    this.damageChest(chest);
+
+    if (!projectile.consumePierce()) {
+      projectile.disableBullet();
+    }
+  }
+
+  handleOrbitBladeHitChest(blade, chest) {
+    if (!blade?.active || !chest?.active) {
+      return;
+    }
+
+    if (!blade.canDamage(chest, this.time.now)) {
+      return;
+    }
+
+    this.damageChest(chest);
+  }
+
+  damageChest(chest) {
+    if (!chest?.active) {
+      return false;
+    }
+
+    const opened = chest.registerHit();
+
+    if (!opened) {
+      return false;
+    }
+
+    const rewardKey = getRewardKey(chest.typeKey);
+    const chestType = CHEST_TYPES[chest.typeKey];
+    const rewardResult = this.applyChestReward(chestType, rewardKey);
+
+    chest.deactivate();
+    this.showChestReward(chest, chestType, rewardKey, rewardResult);
+    this.emitStats(true);
+    return true;
   }
 
   handlePlayerCollectGem(player, gem) {
@@ -1197,6 +1485,135 @@ export class MainScene extends Phaser.Scene {
     gem = new ExperienceGem(this, x, y, value);
     this.experienceGems.add(gem);
     this.registerGemInGrid(gem);
+  }
+
+  applyChestReward(chestType, rewardKey) {
+    if (rewardKey === 'potion') {
+      const potionReward = chestType.rewards.potion;
+      const missingHealth = this.player.maxHealth - this.player.health;
+
+      if (potionReward.fullHeal) {
+        if (missingHealth > 0) {
+          this.player.health = this.player.maxHealth;
+          return { amount: missingHealth, suffix: '生命' };
+        }
+
+        this.player.addShield(potionReward.shieldOnFull ?? 0);
+        return { amount: potionReward.shieldOnFull ?? 0, suffix: '護盾' };
+      }
+
+      if (missingHealth > 0) {
+        const healAmount = Math.min(missingHealth, potionReward.heal ?? 0);
+        this.player.health += healAmount;
+        return { amount: healAmount, suffix: '生命' };
+      }
+
+      this.player.addShield(potionReward.shieldOnFull ?? 0);
+      return { amount: potionReward.shieldOnFull ?? 0, suffix: '護盾' };
+    }
+
+    if (rewardKey === 'gold') {
+      const goldAmount = getGoldRewardAmount(chestType.key, this.getElapsedTime(), this.currentDifficultyStage.stage);
+      this.gold += goldAmount;
+      return { amount: goldAmount, suffix: '金幣' };
+    }
+
+    const magnetRadius = chestType.rewards.magnet.radius;
+    const collected = this.collectExperienceByMagnet(magnetRadius);
+    return { amount: collected, suffix: '經驗' };
+  }
+
+  collectExperienceByMagnet(radius) {
+    const gemsToCollect = [];
+
+    if (!Number.isFinite(radius)) {
+      this.experienceGems.children.iterate((gem) => {
+        if (gem?.active) {
+          gemsToCollect.push(gem);
+        }
+      });
+    } else {
+      this.forEachNearbyGem(this.player.x, this.player.y, radius, (gem) => {
+        const dx = this.player.x - gem.x;
+        const dy = this.player.y - gem.y;
+
+        if (dx * dx + dy * dy <= radius * radius) {
+          gemsToCollect.push(gem);
+        }
+      });
+    }
+
+    let collectedCount = 0;
+
+    gemsToCollect.forEach((gem) => {
+      if (gem?.active) {
+        this.handlePlayerCollectGem(this.player, gem);
+        collectedCount += 1;
+      }
+    });
+
+    return collectedCount;
+  }
+
+  showChestReward(chest, chestType, rewardKey, rewardResult) {
+    const rewardName = REWARD_TYPES[rewardKey].name;
+    const fx = chestType.openFx;
+    const pulse = this.add.circle(chest.x, chest.y, fx.radius * 0.42, fx.color, 0.35);
+    pulse.setDepth(5);
+
+    this.tweens.add({
+      targets: pulse,
+      alpha: 0,
+      scaleX: 2.2 * fx.rewardScale,
+      scaleY: 2.2 * fx.rewardScale,
+      duration: chestType.key === 'gold' ? 360 : 240,
+      ease: 'Quad.Out',
+      onComplete: () => pulse.destroy()
+    });
+
+    if (chestType.key === 'gold') {
+      const ring = this.add.circle(chest.x, chest.y, fx.radius * 0.72, fx.color, 0.16);
+      ring.setDepth(5);
+      this.tweens.add({
+        targets: ring,
+        alpha: 0,
+        scaleX: 2.6,
+        scaleY: 2.6,
+        duration: 520,
+        ease: 'Sine.Out',
+        onComplete: () => ring.destroy()
+      });
+      this.cameras.main.shake(120, 0.0032);
+    }
+
+    const detail = rewardKey === 'magnet'
+      ? `${rewardName} 吸收 ${rewardResult.amount} 經驗`
+      : `${rewardName} +${rewardResult.amount} ${rewardResult.suffix}`;
+
+    const text = this.add.text(chest.x, chest.y - 22, `${chestType.name}\n${detail}`, {
+      fontFamily: 'Trebuchet MS',
+      fontSize: chestType.key === 'gold' ? '17px' : '14px',
+      align: 'center',
+      color: '#fff6dc',
+      stroke: '#1d0e03',
+      strokeThickness: 3
+    }).setOrigin(0.5).setDepth(6);
+
+    this.tweens.add({
+      targets: text,
+      y: text.y - 26,
+      alpha: 0,
+      duration: chestType.key === 'gold' ? 1100 : 800,
+      ease: 'Sine.Out',
+      onComplete: () => text.destroy()
+    });
+
+    this.lastChestReward = {
+      chestType: chestType.name,
+      rewardKey,
+      rewardName,
+      amount: rewardResult.amount
+    };
   }
 
   gainExperience(amount) {
@@ -1447,6 +1864,8 @@ export class MainScene extends Phaser.Scene {
       experienceToNextLevel: this.experienceToNextLevel,
       health: this.player.health,
       maxHealth: this.player.maxHealth,
+      shield: this.player.shield,
+      gold: this.gold,
       kills: this.kills,
       enemies: this.enemies.countActive(true),
       time: this.getElapsedTime(),
@@ -1461,6 +1880,15 @@ export class MainScene extends Phaser.Scene {
     });
   }
 }
+
+
+
+
+
+
+
+
+
 
 
 

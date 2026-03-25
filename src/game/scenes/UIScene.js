@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+﻿import Phaser from 'phaser';
 
 export class UIScene extends Phaser.Scene {
   constructor() {
@@ -16,67 +16,30 @@ export class UIScene extends Phaser.Scene {
       escape: Phaser.Input.Keyboard.KeyCodes.ESC
     });
 
-    this.panel = this.add.rectangle(12, 12, 244, 170, 0x04101a, 0.82).setOrigin(0);
-    this.panel.setStrokeStyle(2, 0x6dd3ff, 0.4);
-    this.panel.setScrollFactor(0);
+    this.expBarBackground = this.add.rectangle(12, 8, this.scale.width - 24, 8, 0x07131d, 0.88).setOrigin(0, 0).setScrollFactor(0);
+    this.expBarFill = this.add.rectangle(12, 8, 0, 8, 0x75f2b7, 1).setOrigin(0, 0).setScrollFactor(0);
+    this.expBarFrame = this.add.rectangle(12, 8, this.scale.width - 24, 8).setOrigin(0, 0).setStrokeStyle(1, 0xd5fff0, 0.5).setFillStyle(0x000000, 0).setScrollFactor(0);
 
-    this.titleText = this.add
-      .text(24, 18, 'STARFALL SURVIVOR', {
+    this.levelBadge = this.add
+      .text(14, 19, 'Lv 1', {
         fontFamily: 'Trebuchet MS',
         fontSize: '14px',
-        color: '#f5e6a8'
+        color: '#f5e6a8',
+        stroke: '#10212c',
+        strokeThickness: 3
       })
       .setScrollFactor(0);
 
-    this.statsText = this.add
-      .text(24, 42, '', {
+    this.infoBackdrop = this.add.rectangle(10, 38, 128, 48, 0x05111a, 0.34).setOrigin(0).setScrollFactor(0);
+    this.infoText = this.add
+      .text(16, 43, '', {
         fontFamily: 'Trebuchet MS',
         fontSize: '13px',
-        color: '#f3efe0',
-        lineSpacing: 6
+        color: '#eff7fb',
+        lineSpacing: 5,
+        stroke: '#081019',
+        strokeThickness: 3
       })
-      .setScrollFactor(0);
-
-    this.healthLabel = this.add
-      .text(24, 126, 'HP', {
-        fontFamily: 'Trebuchet MS',
-        fontSize: '12px',
-        color: '#f3b7b2'
-      })
-      .setScrollFactor(0);
-
-    this.healthBarBackground = this.add
-      .rectangle(54, 130, 168, 10, 0x341012, 1)
-      .setOrigin(0, 0.5)
-      .setScrollFactor(0);
-
-    this.healthBarFill = this.add
-      .rectangle(54, 130, 168, 10, 0xff7b72, 1)
-      .setOrigin(0, 0.5)
-      .setScrollFactor(0);
-
-    this.healthBarFrame = this.add
-      .rectangle(54, 130, 168, 10)
-      .setOrigin(0, 0.5)
-      .setStrokeStyle(2, 0xffc2bb, 0.45)
-      .setFillStyle(0x000000, 0)
-      .setScrollFactor(0);
-
-    this.expBarBackground = this.add
-      .rectangle(24, 148, 198, 10, 0x0d2434, 1)
-      .setOrigin(0, 0)
-      .setScrollFactor(0);
-
-    this.expBarFill = this.add
-      .rectangle(24, 148, 0, 10, 0x75f2b7, 1)
-      .setOrigin(0, 0)
-      .setScrollFactor(0);
-
-    this.expBarFrame = this.add
-      .rectangle(24, 148, 198, 10)
-      .setOrigin(0, 0)
-      .setStrokeStyle(2, 0xbceee0, 0.5)
-      .setFillStyle(0x000000, 0)
       .setScrollFactor(0);
 
     this.createBossBar();
@@ -121,6 +84,8 @@ export class UIScene extends Phaser.Scene {
       health: 6,
       maxHealth: 6,
       time: 0,
+      gold: 0,
+      shield: 0,
       isPaused: false
     });
   }
@@ -133,20 +98,18 @@ export class UIScene extends Phaser.Scene {
 
   updateStats(stats) {
     const expRatio = Phaser.Math.Clamp(stats.experience / stats.experienceToNextLevel, 0, 1);
-    const hpRatio = Phaser.Math.Clamp(stats.health / stats.maxHealth, 0, 1);
 
-    this.statsText.setText(
-      `Lv ${stats.level}  ${stats.difficultyLabel}\nTime ${stats.time.toFixed(1)}s\nEXP ${stats.experience} / ${stats.experienceToNextLevel}`
+    this.levelBadge.setText(`Lv ${stats.level}`);
+    this.infoText.setText(
+      `${stats.difficultyLabel}\n${stats.time.toFixed(1)}s  金 ${stats.gold ?? 0}`
     );
-
-    this.expBarFill.width = 198 * expRatio;
-    this.healthBarFill.width = 168 * hpRatio;
+    this.expBarFill.width = this.expBarWidth * expRatio;
     this.isPaused = stats.isPaused ?? this.isPaused;
 
     if (stats.boss) {
       const bossRatio = Phaser.Math.Clamp(stats.boss.health / stats.boss.maxHealth, 0, 1);
       this.bossBarTitle.setText(stats.boss.name);
-      this.bossBarFill.width = 220 * bossRatio;
+      this.bossBarFill.width = this.bossBarWidth * bossRatio;
       this.bossBarTitle.setVisible(true);
       this.bossBarBackground.setVisible(true);
       this.bossBarFill.setVisible(true);
@@ -162,35 +125,28 @@ export class UIScene extends Phaser.Scene {
   handleResize(gameSize) {
     const isTallMobile = gameSize.width <= 420;
     const isShortLandscape = gameSize.height < 520;
-    const hudScale = isTallMobile ? 1 : 1.08;
-    const panelX = isTallMobile ? 10 : 14;
-    const panelY = isTallMobile ? 10 : 14;
     const joystickY = isShortLandscape ? gameSize.height - 74 : gameSize.height - 86;
-    const pauseButtonX = gameSize.width - (isTallMobile ? 36 : 40);
-    const pauseButtonY = isTallMobile ? 28 : 32;
 
-    this.panel.setScale(hudScale).setPosition(panelX, panelY);
-    this.titleText.setScale(hudScale).setPosition(panelX + 12, panelY + 6);
-    this.statsText.setScale(hudScale).setPosition(panelX + 12, panelY + 30);
-    this.healthLabel.setScale(hudScale).setPosition(panelX + 12, panelY + 114);
+    this.expBarWidth = gameSize.width - 24;
+    this.expBarBackground.setSize(this.expBarWidth, 8).setPosition(12, 8);
+    this.expBarFill.setPosition(12, 8);
+    this.expBarFrame.setSize(this.expBarWidth, 8).setPosition(12, 8);
+    this.levelBadge.setPosition(14, 19).setFontSize(isTallMobile ? '14px' : '15px');
 
-    this.healthBarBackground.setScale(hudScale).setPosition(panelX + 42, panelY + 118);
-    this.healthBarFill.setScale(hudScale).setPosition(panelX + 42, panelY + 118);
-    this.healthBarFrame.setScale(hudScale).setPosition(panelX + 42, panelY + 118);
-    this.expBarBackground.setScale(hudScale).setPosition(panelX + 12, panelY + 136);
-    this.expBarFill.setScale(hudScale).setPosition(panelX + 12, panelY + 136);
-    this.expBarFrame.setScale(hudScale).setPosition(panelX + 12, panelY + 136);
+    this.infoBackdrop.setPosition(10, 36).setSize(isTallMobile ? 126 : 136, 48);
+    this.infoText.setPosition(16, 41).setFontSize(isTallMobile ? '13px' : '14px');
 
     this.helpText.setPosition(12, gameSize.height - 10);
     this.helpText.setFontSize(isTallMobile ? '11px' : '12px');
 
-    this.pauseButton.setPosition(pauseButtonX, pauseButtonY);
+    this.pauseButton.setPosition(gameSize.width - 34, 30);
+    this.pauseButtonBackground.setSize(46, 46);
 
-    this.bossBarTitle.setPosition(gameSize.width / 2, isTallMobile ? 10 : 14);
-    this.bossBarBackground.setPosition(gameSize.width / 2, isTallMobile ? 30 : 34);
-    this.bossBarFill.setPosition(gameSize.width / 2 - 110, isTallMobile ? 30 : 34);
-    this.bossBarFrame.setPosition(gameSize.width / 2, isTallMobile ? 30 : 34);
-    this.pauseButtonBackground.setSize(isTallMobile ? 42 : 46, isTallMobile ? 42 : 46);
+    this.bossBarWidth = Math.min(gameSize.width - 84, 232);
+    this.bossBarTitle.setPosition(gameSize.width / 2, 18);
+    this.bossBarBackground.setPosition(gameSize.width / 2, 54).setSize(this.bossBarWidth, 10);
+    this.bossBarFill.setPosition(gameSize.width / 2 - this.bossBarWidth / 2, 54);
+    this.bossBarFrame.setPosition(gameSize.width / 2, 54).setSize(this.bossBarWidth, 10);
 
     this.joystickBasePosition = new Phaser.Math.Vector2(gameSize.width / 2, joystickY);
     this.joystickBase.setPosition(this.joystickBasePosition.x, this.joystickBasePosition.y);
@@ -199,17 +155,13 @@ export class UIScene extends Phaser.Scene {
     this.joystickThumb.setScale(isTallMobile ? 1 : 1.08);
 
     this.pauseBackdrop.setSize(gameSize.width, gameSize.height);
-    this.pausePanel
-      .setSize(Math.min(gameSize.width - 40, 300), 204)
-      .setPosition(gameSize.width / 2, gameSize.height / 2);
+    this.pausePanel.setSize(Math.min(gameSize.width - 40, 300), 204).setPosition(gameSize.width / 2, gameSize.height / 2);
     this.pauseTitle.setPosition(gameSize.width / 2, gameSize.height / 2 - 52);
     this.pauseHint.setPosition(gameSize.width / 2, gameSize.height / 2 - 10);
     this.resumeButton.setPosition(gameSize.width / 2, gameSize.height / 2 + 52);
 
     this.levelUpBackdrop.setSize(gameSize.width, gameSize.height);
-    this.levelUpPanel
-      .setSize(Math.min(gameSize.width - 32, 320), Math.min(gameSize.height - 48, 388))
-      .setPosition(gameSize.width / 2, gameSize.height / 2);
+    this.levelUpPanel.setSize(Math.min(gameSize.width - 32, 320), Math.min(gameSize.height - 48, 388)).setPosition(gameSize.width / 2, gameSize.height / 2);
     this.levelUpTitle.setPosition(gameSize.width / 2, gameSize.height / 2 - 138);
     this.levelUpTitle.setFontSize(isTallMobile ? '24px' : '28px');
     this.optionButtons.forEach((button, index) => {
@@ -219,9 +171,7 @@ export class UIScene extends Phaser.Scene {
     });
 
     this.gameOverBackdrop.setSize(gameSize.width, gameSize.height);
-    this.gameOverPanel
-      .setSize(Math.min(gameSize.width - 34, 320), Math.min(gameSize.height - 80, 300))
-      .setPosition(gameSize.width / 2, gameSize.height / 2);
+    this.gameOverPanel.setSize(Math.min(gameSize.width - 34, 320), Math.min(gameSize.height - 80, 300)).setPosition(gameSize.width / 2, gameSize.height / 2);
     this.gameOverTitle.setPosition(gameSize.width / 2, gameSize.height / 2 - 92);
     this.gameOverTitle.setFontSize(isTallMobile ? '30px' : '34px');
     this.gameOverStats.setPosition(gameSize.width / 2, gameSize.height / 2 - 14);
@@ -244,10 +194,10 @@ export class UIScene extends Phaser.Scene {
     this.game.events.off('game-reset', this.resetOverlays, this);
   }
 
-
   createBossBar() {
+    this.bossBarWidth = 220;
     this.bossBarTitle = this.add
-      .text(this.scale.width / 2, 16, '', {
+      .text(this.scale.width / 2, 18, '', {
         fontFamily: 'Trebuchet MS',
         fontSize: '14px',
         color: '#dff7ff'
@@ -257,28 +207,29 @@ export class UIScene extends Phaser.Scene {
       .setVisible(false);
 
     this.bossBarBackground = this.add
-      .rectangle(this.scale.width / 2, 38, 220, 12, 0x26131b, 0.95)
+      .rectangle(this.scale.width / 2, 54, this.bossBarWidth, 10, 0x26131b, 0.92)
       .setOrigin(0.5, 0)
       .setScrollFactor(0)
       .setVisible(false);
 
     this.bossBarFill = this.add
-      .rectangle(this.scale.width / 2 - 110, 38, 220, 12, 0x6dd3ff, 1)
+      .rectangle(this.scale.width / 2 - this.bossBarWidth / 2, 54, this.bossBarWidth, 10, 0x6dd3ff, 1)
       .setOrigin(0, 0)
       .setScrollFactor(0)
       .setVisible(false);
 
     this.bossBarFrame = this.add
-      .rectangle(this.scale.width / 2, 38, 220, 12)
+      .rectangle(this.scale.width / 2, 54, this.bossBarWidth, 10)
       .setOrigin(0.5, 0)
-      .setStrokeStyle(2, 0xe2fbff, 0.4)
+      .setStrokeStyle(1, 0xe2fbff, 0.4)
       .setFillStyle(0x000000, 0)
       .setScrollFactor(0)
       .setVisible(false);
   }
+
   createPauseButton() {
     this.pauseButtonBackground = this.add
-      .rectangle(0, 0, 42, 42, 0x102839, 0.92)
+      .rectangle(0, 0, 46, 46, 0x102839, 0.92)
       .setStrokeStyle(2, 0x6dd3ff, 0.38)
       .setInteractive({ useHandCursor: true });
 
@@ -361,11 +312,7 @@ export class UIScene extends Phaser.Scene {
     resumeBackground.on('pointerover', () => resumeBackground.setFillStyle(0x1d4a67, 1));
     resumeBackground.on('pointerout', () => resumeBackground.setFillStyle(0x17384e, 1));
 
-    this.resumeButton = this.add.container(
-      this.scale.width / 2,
-      this.scale.height / 2 + 52,
-      [resumeBackground, resumeLabel]
-    );
+    this.resumeButton = this.add.container(this.scale.width / 2, this.scale.height / 2 + 52, [resumeBackground, resumeLabel]);
     this.resumeButton.setScrollFactor(0);
     this.resumeButton.setVisible(false);
   }
@@ -422,12 +369,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   isPointerInJoystickZone(pointer) {
-    return Phaser.Math.Distance.Between(
-      pointer.x,
-      pointer.y,
-      this.joystickBasePosition.x,
-      this.joystickBasePosition.y
-    ) <= this.joystickActivationRadius;
+    return Phaser.Math.Distance.Between(pointer.x, pointer.y, this.joystickBasePosition.x, this.joystickBasePosition.y) <= this.joystickActivationRadius;
   }
 
   updateJoystick(pointer) {
@@ -439,10 +381,7 @@ export class UIScene extends Phaser.Scene {
       vector.setLength(this.joystickMaxDistance);
     }
 
-    this.joystickThumb.setPosition(
-      this.joystickBasePosition.x + vector.x,
-      this.joystickBasePosition.y + vector.y
-    );
+    this.joystickThumb.setPosition(this.joystickBasePosition.x + vector.x, this.joystickBasePosition.y + vector.y);
 
     this.game.events.emit('virtual-joystick-move', {
       x: Phaser.Math.Clamp(vector.x / this.joystickMaxDistance, -1, 1),
@@ -461,70 +400,38 @@ export class UIScene extends Phaser.Scene {
   }
 
   createLevelUpMenu() {
-    this.levelUpBackdrop = this.add
-      .rectangle(0, 0, this.scale.width, this.scale.height, 0x02070d, 0.72)
-      .setOrigin(0)
-      .setScrollFactor(0)
-      .setVisible(false);
-
-    this.levelUpPanel = this.add
-      .rectangle(this.scale.width / 2, this.scale.height / 2, 320, 388, 0x091824, 0.96)
-      .setStrokeStyle(3, 0x75f2b7, 0.45)
-      .setScrollFactor(0)
-      .setVisible(false);
-
-    this.levelUpTitle = this.add
-      .text(this.scale.width / 2, this.scale.height / 2 - 138, 'Choose an Upgrade', {
-        fontFamily: 'Trebuchet MS',
-        fontSize: '24px',
-        color: '#f5e6a8'
-      })
-      .setOrigin(0.5)
-      .setScrollFactor(0)
-      .setVisible(false);
+    this.levelUpBackdrop = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x02070d, 0.72).setOrigin(0).setScrollFactor(0).setVisible(false);
+    this.levelUpPanel = this.add.rectangle(this.scale.width / 2, this.scale.height / 2, 320, 388, 0x091824, 0.96).setStrokeStyle(3, 0x75f2b7, 0.45).setScrollFactor(0).setVisible(false);
+    this.levelUpTitle = this.add.text(this.scale.width / 2, this.scale.height / 2 - 138, 'Choose an Upgrade', {
+      fontFamily: 'Trebuchet MS',
+      fontSize: '24px',
+      color: '#f5e6a8'
+    }).setOrigin(0.5).setScrollFactor(0).setVisible(false);
 
     this.optionButtons = [0, 1, 2].map((index) => this.createOptionButton(index));
   }
 
   createOptionButton(index) {
-    const container = this.add.container(
-      this.scale.width / 2,
-      this.scale.height / 2 - 52 + index * 92
-    );
+    const container = this.add.container(this.scale.width / 2, this.scale.height / 2 - 52 + index * 92);
     container.setScrollFactor(0);
     container.setVisible(false);
 
-    const background = this.add
-      .rectangle(0, 0, 280, 82, 0x102839, 1)
-      .setStrokeStyle(2, 0x6dd3ff, 0.38)
-      .setInteractive({ useHandCursor: true });
+    const background = this.add.rectangle(0, 0, 280, 82, 0x102839, 1).setStrokeStyle(2, 0x6dd3ff, 0.38).setInteractive({ useHandCursor: true });
+    const title = this.add.text(-126, -22, '', {
+      fontFamily: 'Trebuchet MS',
+      fontSize: '18px',
+      color: '#ffffff'
+    }).setOrigin(0, 0.5);
+    const description = this.add.text(-126, 10, '', {
+      fontFamily: 'Trebuchet MS',
+      fontSize: '12px',
+      color: '#b8cfdb',
+      wordWrap: { width: 220 },
+      lineSpacing: 3
+    }).setOrigin(0, 0.5);
 
-    const title = this.add
-      .text(-126, -22, '', {
-        fontFamily: 'Trebuchet MS',
-        fontSize: '18px',
-        color: '#ffffff'
-      })
-      .setOrigin(0, 0.5);
-
-    const description = this.add
-      .text(-126, 10, '', {
-        fontFamily: 'Trebuchet MS',
-        fontSize: '12px',
-        color: '#b8cfdb',
-        wordWrap: { width: 220 },
-        lineSpacing: 3
-      })
-      .setOrigin(0, 0.5);
-
-    background.on('pointerover', () => {
-      background.setFillStyle(0x15354a, 1);
-    });
-
-    background.on('pointerout', () => {
-      background.setFillStyle(0x102839, 1);
-    });
-
+    background.on('pointerover', () => background.setFillStyle(0x15354a, 1));
+    background.on('pointerout', () => background.setFillStyle(0x102839, 1));
     background.on('pointerdown', () => {
       if (!background.upgradeId) {
         return;
@@ -536,80 +443,40 @@ export class UIScene extends Phaser.Scene {
 
     container.add([background, title, description]);
 
-    return {
-      container,
-      background,
-      title,
-      description
-    };
+    return { container, background, title, description };
   }
 
   createGameOverMenu() {
-    this.gameOverBackdrop = this.add
-      .rectangle(0, 0, this.scale.width, this.scale.height, 0x02070d, 0.78)
-      .setOrigin(0)
-      .setScrollFactor(0)
-      .setVisible(false);
+    this.gameOverBackdrop = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x02070d, 0.78).setOrigin(0).setScrollFactor(0).setVisible(false);
+    this.gameOverPanel = this.add.rectangle(this.scale.width / 2, this.scale.height / 2, 320, 300, 0x091824, 0.98).setStrokeStyle(3, 0xff7b72, 0.5).setScrollFactor(0).setVisible(false);
+    this.gameOverTitle = this.add.text(this.scale.width / 2, this.scale.height / 2 - 92, 'Game Over', {
+      fontFamily: 'Trebuchet MS',
+      fontSize: '30px',
+      color: '#ffd1cb'
+    }).setOrigin(0.5).setScrollFactor(0).setVisible(false);
+    this.gameOverStats = this.add.text(this.scale.width / 2, this.scale.height / 2 - 14, '', {
+      fontFamily: 'Trebuchet MS',
+      fontSize: '18px',
+      color: '#f3efe0',
+      align: 'center',
+      lineSpacing: 8
+    }).setOrigin(0.5).setScrollFactor(0).setVisible(false);
 
-    this.gameOverPanel = this.add
-      .rectangle(this.scale.width / 2, this.scale.height / 2, 320, 300, 0x091824, 0.98)
-      .setStrokeStyle(3, 0xff7b72, 0.5)
-      .setScrollFactor(0)
-      .setVisible(false);
+    const buttonBackground = this.add.rectangle(0, 0, 200, 52, 0x17384e, 1).setStrokeStyle(2, 0x9ae5ff, 0.45).setInteractive({ useHandCursor: true });
+    const buttonLabel = this.add.text(0, 0, 'Restart Run', {
+      fontFamily: 'Trebuchet MS',
+      fontSize: '20px',
+      color: '#ffffff'
+    }).setOrigin(0.5);
 
-    this.gameOverTitle = this.add
-      .text(this.scale.width / 2, this.scale.height / 2 - 92, 'Game Over', {
-        fontFamily: 'Trebuchet MS',
-        fontSize: '30px',
-        color: '#ffd1cb'
-      })
-      .setOrigin(0.5)
-      .setScrollFactor(0)
-      .setVisible(false);
-
-    this.gameOverStats = this.add
-      .text(this.scale.width / 2, this.scale.height / 2 - 14, '', {
-        fontFamily: 'Trebuchet MS',
-        fontSize: '18px',
-        color: '#f3efe0',
-        align: 'center',
-        lineSpacing: 8
-      })
-      .setOrigin(0.5)
-      .setScrollFactor(0)
-      .setVisible(false);
-
-    const buttonBackground = this.add
-      .rectangle(0, 0, 200, 52, 0x17384e, 1)
-      .setStrokeStyle(2, 0x9ae5ff, 0.45)
-      .setInteractive({ useHandCursor: true });
-
-    const buttonLabel = this.add
-      .text(0, 0, 'Restart Run', {
-        fontFamily: 'Trebuchet MS',
-        fontSize: '20px',
-        color: '#ffffff'
-      })
-      .setOrigin(0.5);
-
-    buttonBackground.on('pointerover', () => {
-      buttonBackground.setFillStyle(0x1d4a67, 1);
-    });
-
-    buttonBackground.on('pointerout', () => {
-      buttonBackground.setFillStyle(0x17384e, 1);
-    });
-
+    buttonBackground.on('pointerover', () => buttonBackground.setFillStyle(0x1d4a67, 1));
+    buttonBackground.on('pointerout', () => buttonBackground.setFillStyle(0x17384e, 1));
     buttonBackground.on('pointerdown', () => {
       const mainScene = this.scene.get('MainScene');
       mainScene.restartRun();
     });
 
-    this.restartButton = this.add.container(
-      this.scale.width / 2,
-      this.scale.height / 2 + 84,
-      [buttonBackground, buttonLabel]
-    );
+    this.restartButton = this.add.container(this.scale.width / 2, this.scale.height / 2 + 84, [buttonBackground, buttonLabel]);
     this.restartButton.setScrollFactor(0);
     this.restartButton.setVisible(false);
   }
@@ -645,9 +512,7 @@ export class UIScene extends Phaser.Scene {
     this.hideLevelUpMenu();
     this.setPauseState({ paused: false });
     this.releaseJoystick();
-    this.gameOverStats.setText(
-      `Survived: ${stats.time.toFixed(1)}s\nLevel: ${stats.level}\nKills: ${stats.kills}`
-    );
+    this.gameOverStats.setText(`Survived: ${stats.time.toFixed(1)}s\nLevel: ${stats.level}\nKills: ${stats.kills}`);
     this.gameOverBackdrop.setVisible(true);
     this.gameOverPanel.setVisible(true);
     this.gameOverTitle.setVisible(true);
