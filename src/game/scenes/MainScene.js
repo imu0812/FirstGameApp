@@ -74,7 +74,7 @@ export class MainScene extends Phaser.Scene {
     });
     this.experienceGems = this.add.group({
       classType: ExperienceGem,
-      maxSize: 260
+      maxSize: 420
     });
     this.orbitBlades = this.physics.add.group({
       classType: OrbitingBlade,
@@ -88,6 +88,8 @@ export class MainScene extends Phaser.Scene {
       classType: BossProjectile,
       maxSize: 80
     });
+    this.gemGrid = new Map();
+    this.gemGridCellSize = 96;
 
     this.physics.add.overlap(
       this.projectiles,
@@ -315,9 +317,10 @@ export class MainScene extends Phaser.Scene {
     const healthPassive = this.getPassiveStats('max_health');
 
     this.derivedStats = {
-      fireRateMultiplier: attackPassive.fireRateMultiplier ?? 1,
+      fireRateMultiplier: (attackPassive.fireRateMultiplier ?? 1) * (projectilePassive.cooldownMultiplier ?? 1),
       damageMultiplier: damagePassive.damageMultiplier ?? 1,
       projectileBonus: projectilePassive.projectileBonus ?? 0,
+      projectileSpeedMultiplier: 1 + (projectilePassive.projectileSpeedBonus ?? 0),
       moveSpeedBonus: movePassive.moveSpeedBonus ?? 0,
       pickupRadiusBonus: pickupPassive.pickupRadiusBonus ?? 0,
       maxHealthBonus: healthPassive.maxHealthBonus ?? 0,
@@ -339,7 +342,6 @@ export class MainScene extends Phaser.Scene {
     this.gemUpdateRadius = Math.max(220, this.pickupRadius + 180);
     this.gemUpdateRadiusSq = this.gemUpdateRadius * this.gemUpdateRadius;
   }
-
   getPassiveStats(key) {
     const level = this.passiveLevels[key] ?? 0;
 
@@ -347,7 +349,33 @@ export class MainScene extends Phaser.Scene {
       return {};
     }
 
-    return getPassiveLevelData(key, level);
+    const definition = PASSIVE_DEFS[key];
+
+    if (definition?.stackMode !== 'cumulative') {
+      return getPassiveLevelData(key, level);
+    }
+
+    const aggregatedStats = {};
+
+    for (let currentLevel = 1; currentLevel <= level; currentLevel += 1) {
+      const levelStats = getPassiveLevelData(key, currentLevel);
+
+      Object.entries(levelStats).forEach(([statKey, statValue]) => {
+        if (typeof statValue !== 'number') {
+          aggregatedStats[statKey] = statValue;
+          return;
+        }
+
+        if (statKey.endsWith('Multiplier')) {
+          aggregatedStats[statKey] = (aggregatedStats[statKey] ?? 1) * statValue;
+          return;
+        }
+
+        aggregatedStats[statKey] = (aggregatedStats[statKey] ?? 0) + statValue;
+      });
+    }
+
+    return aggregatedStats;
   }
 
   getWeaponStats(key) {
@@ -360,17 +388,18 @@ export class MainScene extends Phaser.Scene {
       cooldown: baseStats.cooldown
         ? Math.max(120, Math.floor(baseStats.cooldown * this.derivedStats.fireRateMultiplier))
         : undefined,
+      speed: baseStats.speed
+        ? Math.round(baseStats.speed * this.derivedStats.projectileSpeedMultiplier * 100) / 100
+        : undefined,
       projectiles: (baseStats.projectiles ?? 0) + this.derivedStats.projectileBonus,
       count: (baseStats.count ?? 0) + this.derivedStats.projectileBonus
     };
   }
 
-
   showBossDashTelegraph(boss, angle) {
     if (!this.bossDashTelegraph) {
       return;
     }
-
     const length = 280;
     const halfWidth = 22;
     const startX = boss.x;
@@ -819,22 +848,20 @@ export class MainScene extends Phaser.Scene {
   }
 
   updateGemAttraction() {
-    const playerX = this.player.x;
-    const playerY = this.player.y;
+    const playerX = this.player.body?.center.x ?? this.player.x;
+    const playerY = this.player.body?.center.y ?? this.player.y;
     const pickupRadiusSq = this.pickupRadiusSq;
     const pullSpeed = this.derivedStats.gemPullSpeed;
     const deltaSeconds = Math.min(0.05, this.game.loop.delta / 1000);
+    const gemUpdateRadius = this.gemUpdateRadius;
     const gemUpdateRadiusSq = this.gemUpdateRadiusSq;
+    const playerCollectRadius = Math.max(this.autoCollectRadius, this.player.body?.halfWidth ?? 16);
 
-    this.experienceGems.children.iterate((gem) => {
-      if (!gem?.active) {
-        return;
-      }
-
+    this.forEachNearbyGem(playerX, playerY, gemUpdateRadius, (gem) => {
       const dx = playerX - gem.x;
       const dy = playerY - gem.y;
       const distanceSq = dx * dx + dy * dy;
-      const collectRadius = this.autoCollectRadius + (gem.collectRadius ?? 0);
+      const collectRadius = playerCollectRadius + (gem.collectRadius ?? 0);
 
       if (distanceSq <= collectRadius * collectRadius) {
         this.handlePlayerCollectGem(this.player, gem);
@@ -851,10 +878,85 @@ export class MainScene extends Phaser.Scene {
         const pullRatio = 1 - distanceSq / pickupRadiusSq;
         const speed = pullSpeed * (0.95 + pullRatio * 1.8);
         gem.pullToward(dx / distance, dy / distance, speed, deltaSeconds);
+        this.refreshGemGridMembership(gem);
       } else {
         gem.stopMotion();
       }
     });
+  }
+
+  getGemGridKey(x, y) {
+    return `${Math.floor(x / this.gemGridCellSize)}:${Math.floor(y / this.gemGridCellSize)}`;
+  }
+
+  registerGemInGrid(gem) {
+    const key = this.getGemGridKey(gem.x, gem.y);
+    let bucket = this.gemGrid.get(key);
+
+    if (!bucket) {
+      bucket = new Set();
+      this.gemGrid.set(key, bucket);
+    }
+
+    bucket.add(gem);
+    gem.gridKey = key;
+  }
+
+  unregisterGemFromGrid(gem) {
+    if (!gem?.gridKey) {
+      return;
+    }
+
+    const bucket = this.gemGrid.get(gem.gridKey);
+
+    if (bucket) {
+      bucket.delete(gem);
+
+      if (bucket.size === 0) {
+        this.gemGrid.delete(gem.gridKey);
+      }
+    }
+
+    gem.gridKey = '';
+  }
+
+  refreshGemGridMembership(gem) {
+    if (!gem?.active) {
+      this.unregisterGemFromGrid(gem);
+      return;
+    }
+
+    const nextKey = this.getGemGridKey(gem.x, gem.y);
+
+    if (nextKey === gem.gridKey) {
+      return;
+    }
+
+    this.unregisterGemFromGrid(gem);
+    this.registerGemInGrid(gem);
+  }
+
+  forEachNearbyGem(centerX, centerY, radius, callback) {
+    const minCellX = Math.floor((centerX - radius) / this.gemGridCellSize);
+    const maxCellX = Math.floor((centerX + radius) / this.gemGridCellSize);
+    const minCellY = Math.floor((centerY - radius) / this.gemGridCellSize);
+    const maxCellY = Math.floor((centerY + radius) / this.gemGridCellSize);
+
+    for (let cellX = minCellX; cellX <= maxCellX; cellX += 1) {
+      for (let cellY = minCellY; cellY <= maxCellY; cellY += 1) {
+        const bucket = this.gemGrid.get(`${cellX}:${cellY}`);
+
+        if (!bucket) {
+          continue;
+        }
+
+        bucket.forEach((gem) => {
+          if (gem?.active) {
+            callback(gem);
+          }
+        });
+      }
+    }
   }
 
   findNearestEnemy(maxRange = Number.POSITIVE_INFINITY) {
@@ -1042,6 +1144,7 @@ export class MainScene extends Phaser.Scene {
       this.triggerGameOver();
     }
   }
+
   handleEnemyHitPlayer(player, enemy) {
     if (this.isLevelingUp || this.isGameOver) {
       return;
@@ -1076,6 +1179,7 @@ export class MainScene extends Phaser.Scene {
       return;
     }
 
+    this.unregisterGemFromGrid(gem);
     const value = gem.value;
     gem.collect();
     this.gainExperience(value);
@@ -1086,11 +1190,13 @@ export class MainScene extends Phaser.Scene {
 
     if (gem) {
       gem.spawn(x, y, value);
+      this.registerGemInGrid(gem);
       return;
     }
 
     gem = new ExperienceGem(this, x, y, value);
     this.experienceGems.add(gem);
+    this.registerGemInGrid(gem);
   }
 
   gainExperience(amount) {
@@ -1201,46 +1307,60 @@ export class MainScene extends Phaser.Scene {
     const intro = isUnlock ? `${def.unlockDescription} ` : '';
 
     if (def.type === 'auto') {
-      return `${intro}傷害 ${stats.damage}，射程 ${stats.range}，冷卻 ${stats.cooldown}ms，發射 ${stats.projectiles} 枚飛矢。`;
+      return `${intro}傷害 ${stats.damage}｜射程 ${stats.range}｜飛矢 ${stats.projectiles}`;
     }
 
     if (def.type === 'orbit') {
-      return `${intro}生成 ${stats.count} 枚飛刃，傷害 ${stats.damage}，環繞半徑 ${stats.radius}。`;
+      return `${intro}飛刃 ${stats.count}｜傷害 ${stats.damage}｜半徑 ${stats.radius}`;
     }
 
     if (def.type === 'pierce') {
       const slowPercent = Math.round((1 - stats.slowMultiplier) * 100);
       const freezeText = stats.freezeDuration > 0 ? `，冰凍 ${Math.round(stats.freezeDuration / 100) / 10} 秒` : '';
-      return `${intro}傷害 ${stats.damage}，射程 ${stats.range}，緩速 ${slowPercent}%，持續 ${Math.round(stats.slowDuration / 100) / 10} 秒${freezeText}，發射 ${stats.projectiles} 枚冰箭。`;
+      return `${intro}傷害 ${stats.damage}｜緩速 ${slowPercent}%｜冰箭 ${stats.projectiles}${freezeText}`;
     }
 
-    return `${intro}傷害 ${stats.damage}，射程 ${stats.range}，爆炸半徑 ${stats.radius}，發射 ${stats.projectiles} 顆種子。`;
+    return `${intro}傷害 ${stats.damage}｜爆炸 ${stats.radius}｜種子 ${stats.projectiles}`;
   }
 
   describePassiveLevel(key, level) {
     const stats = getPassiveLevelData(key, level);
 
     if (key === 'attack_frequency') {
-      return `武器冷卻縮短為原本的 ${Math.round(stats.fireRateMultiplier * 100)}%。`;
+      return `本級效果：攻擊間隔 -${100 - Math.round(stats.fireRateMultiplier * 100)}%。`;
     }
 
     if (key === 'damage_boost') {
-      return `所有武器傷害提升為原本的 ${Math.round(stats.damageMultiplier * 100)}%。`;
+      return `本級效果：傷害 +${Math.round((stats.damageMultiplier - 1) * 100)}%。`;
     }
 
     if (key === 'projectile_count') {
-      return `相容武器額外增加 ${stats.projectileBonus} 枚投射物。`;
+      const effects = [];
+
+      if (stats.projectileBonus) {
+        effects.push(`獲得 +${stats.projectileBonus} 投射物`);
+      }
+
+      if (stats.cooldownMultiplier) {
+        effects.push(`攻擊間隔 -${Math.round((1 - stats.cooldownMultiplier) * 100)}%`);
+      }
+
+      if (stats.projectileSpeedBonus) {
+        effects.push(`投射速度 +${Math.round(stats.projectileSpeedBonus * 100)}%`);
+      }
+
+      return `本級效果：${effects.join('，')}。`;
     }
 
     if (key === 'move_speed') {
-      return `移動速度 +${stats.moveSpeedBonus}。`;
+      return `本級效果：移速 +${stats.moveSpeedBonus}。`;
     }
 
     if (key === 'pickup_radius') {
-      return `拾取範圍 +${stats.pickupRadiusBonus}。`;
+      return `本級效果：拾取範圍 +${stats.pickupRadiusBonus}。`;
     }
 
-    return `最大生命 +${stats.maxHealthBonus}，立即回復 ${stats.healOnGain} 點生命。`;
+    return `本級效果：生命上限 +${stats.maxHealthBonus}，回復 ${stats.healOnGain}。`;
   }
 
   applyUpgrade(upgradeId) {

@@ -5,7 +5,7 @@ export const WEAPON_DEFS = {
     category: 'weapon',
     type: 'auto',
     maxLevel: 5,
-    unlockDescription: '自動朝最近的敵人發射能量飛矢。',
+    unlockDescription: '自動鎖定最近敵人。',
     levels: [
       { range: 300, damage: 2, cooldown: 680, projectiles: 1, speed: 430, lifeSpan: 920, spread: 0.08, pierce: 0, tint: 0xffe38b, scale: 1 },
       { range: 315, damage: 3, cooldown: 590, projectiles: 1, speed: 450, lifeSpan: 960, spread: 0.08, pierce: 0, tint: 0xffe38b, scale: 1 },
@@ -20,7 +20,7 @@ export const WEAPON_DEFS = {
     category: 'weapon',
     type: 'orbit',
     maxLevel: 5,
-    unlockDescription: '在玩家周圍形成持續旋轉的飛刃環。',
+    unlockDescription: '飛刃環繞，持續切割周圍敵人。',
     levels: [
       { damage: 2, count: 1, radius: 58, orbitSpeed: 1.7, hitCooldown: 320, tint: 0x7ef9ff, scale: 0.95 },
       { damage: 2, count: 2, radius: 60, orbitSpeed: 1.85, hitCooldown: 300, tint: 0x7ef9ff, scale: 0.98 },
@@ -35,7 +35,7 @@ export const WEAPON_DEFS = {
     category: 'weapon',
     type: 'pierce',
     maxLevel: 5,
-    unlockDescription: '射出寒霜箭矢，命中後使敵人減速，後期可短暫冰凍。',
+    unlockDescription: '寒霜箭命中附帶緩速。',
     levels: [
       { range: 360, damage: 2, cooldown: 1380, projectiles: 1, speed: 520, lifeSpan: 1160, spread: 0.03, pierce: 1, slowMultiplier: 0.7, slowDuration: 1400, freezeDuration: 0, tint: 0x8ddfff, scale: 1.02 },
       { range: 380, damage: 3, cooldown: 1260, projectiles: 1, speed: 540, lifeSpan: 1200, spread: 0.03, pierce: 1, slowMultiplier: 0.62, slowDuration: 1600, freezeDuration: 0, tint: 0x97e8ff, scale: 1.04 },
@@ -50,7 +50,7 @@ export const WEAPON_DEFS = {
     category: 'weapon',
     type: 'explosive',
     maxLevel: 5,
-    unlockDescription: '射出不穩定種子，命中後引發爆炸。',
+    unlockDescription: '發射種子，命中後爆炸。',
     levels: [
       { range: 300, damage: 3, cooldown: 2100, projectiles: 1, speed: 265, lifeSpan: 1100, spread: 0.04, radius: 60, tint: 0xff9e7a, scale: 0.95 },
       { range: 320, damage: 4, cooldown: 1920, projectiles: 1, speed: 275, lifeSpan: 1140, spread: 0.05, radius: 70, tint: 0xff9e7a, scale: 1 },
@@ -67,7 +67,7 @@ export const PASSIVE_DEFS = {
     name: '脈衝線圈',
     category: 'passive',
     maxLevel: 5,
-    unlockDescription: '縮短武器冷卻時間。',
+    unlockDescription: '提升攻擊節奏。',
     levels: [
       { fireRateMultiplier: 0.9 },
       { fireRateMultiplier: 0.82 },
@@ -81,7 +81,7 @@ export const PASSIVE_DEFS = {
     name: '核心餘燼',
     category: 'passive',
     maxLevel: 5,
-    unlockDescription: '提高所有武器造成的傷害。',
+    unlockDescription: '提升全武器傷害。',
     levels: [
       { damageMultiplier: 1.2 },
       { damageMultiplier: 1.38 },
@@ -94,14 +94,15 @@ export const PASSIVE_DEFS = {
     key: 'projectile_count',
     name: '分光稜鏡',
     category: 'passive',
+    stackMode: 'cumulative',
     maxLevel: 5,
-    unlockDescription: '增加投射物與環繞武器數量。',
+    unlockDescription: '強化投射物數量與節奏。',
     levels: [
       { projectileBonus: 1 },
+      { cooldownMultiplier: 0.92 },
       { projectileBonus: 1 },
-      { projectileBonus: 2 },
-      { projectileBonus: 2 },
-      { projectileBonus: 3 }
+      { projectileSpeedBonus: 0.25 },
+      { projectileBonus: 1 }
     ]
   },
   move_speed: {
@@ -109,7 +110,7 @@ export const PASSIVE_DEFS = {
     name: '疾行之靴',
     category: 'passive',
     maxLevel: 5,
-    unlockDescription: '提升角色移動速度。',
+    unlockDescription: '提升移動速度。',
     levels: [
       { moveSpeedBonus: 20 },
       { moveSpeedBonus: 40 },
@@ -123,7 +124,7 @@ export const PASSIVE_DEFS = {
     name: '磁引花簇',
     category: 'passive',
     maxLevel: 5,
-    unlockDescription: '擴大經驗寶石的吸附範圍。',
+    unlockDescription: '提升寶石吸附範圍。',
     levels: [
       { pickupRadiusBonus: 40 },
       { pickupRadiusBonus: 80 },
@@ -137,7 +138,7 @@ export const PASSIVE_DEFS = {
     name: '生命甲殼',
     category: 'passive',
     maxLevel: 5,
-    unlockDescription: '提升最大生命並回復少量血量。',
+    unlockDescription: '提升生命上限並回復。',
     levels: [
       { maxHealthBonus: 1, healOnGain: 1 },
       { maxHealthBonus: 2, healOnGain: 1 },
