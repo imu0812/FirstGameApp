@@ -8,7 +8,6 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     scene.physics.add.existing(this);
 
     this.isBoss = true;
-    this.setCircle(20, 4, 4);
     this.body.setAllowGravity(false);
 
     this.spawn(x, y, config);
@@ -18,6 +17,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     this.shockwaveTimer?.remove(false);
     this.shockwaveTimer = null;
 
+    this.phase = config.phase ?? 1;
     this.name = config.name;
     this.moveSpeed = config.speed;
     this.maxHealth = config.maxHealth;
@@ -37,6 +37,8 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     this.bulletLifeSpan = config.bulletLifeSpan;
     this.bulletDamage = config.bulletDamage;
     this.bulletCountPerNode = config.bulletCountPerNode;
+    this.bulletHomingStrength = config.bulletHomingStrength ?? 0;
+    this.bulletNodeDistance = config.bulletNodeDistance ?? 38;
     this.dashAngle = 0;
     this.dashChargeEndAt = 0;
     this.dashEndAt = 0;
@@ -53,8 +55,14 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     this.setVelocity(0, 0);
     this.setTint(this.baseTint);
     this.setScale(config.scale ?? 1);
+    this.updateHitbox();
 
     return this;
+  }
+
+  updateHitbox() {
+    const radius = Math.max(20, Math.round(13 * (this.scaleX ?? 1)));
+    this.setCircle(radius, this.width * 0.5 - radius, this.height * 0.5 - radius);
   }
 
   update(player, time) {

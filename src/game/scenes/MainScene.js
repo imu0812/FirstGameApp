@@ -7,7 +7,8 @@ import { BossProjectile } from '../entities/BossProjectile.js';
 import { ExperienceGem } from '../entities/ExperienceGem.js';
 import { OrbitingBlade } from '../entities/OrbitingBlade.js';
 import { Chest } from '../entities/Chest.js';
-import { BOSS_TYPE, BOSS_WAVE_CONFIG, DIFFICULTY_STAGES, ENEMY_TYPES } from '../data/enemyTypes.js';
+import { ChestRewardDrop } from '../entities/ChestRewardDrop.js';
+import { BOSS_PHASES, DIFFICULTY_STAGES, ENEMY_TYPES } from '../data/enemyTypes.js';
 import {
   PASSIVE_DEFS,
   WEAPON_DEFS,
@@ -50,8 +51,13 @@ export class MainScene extends Phaser.Scene {
       arc_bolt: 1
     };
     this.passiveLevels = {};
-    this.bossConfig = BOSS_TYPE;
-    this.nextBossAt = BOSS_WAVE_CONFIG.firstSpawnAt;
+    this.bossPhases = BOSS_PHASES;
+    this.currentBossPhase = 0;
+    this.bossSpawnFlags = Object.fromEntries(this.bossPhases.map((phase) => [phase.phase, false]));
+    this.bossAlive = false;
+    this.stageCleared = false;
+    this.pendingBossPhase = null;
+    this.bossWarningEvent = null;
     this.gold = 0;
     this.bossSpawnGraceDuration = 6000;
     this.spawnSuppressionStartedAt = null;
@@ -94,6 +100,11 @@ export class MainScene extends Phaser.Scene {
       classType: Chest,
       maxSize: 8
     });
+    this.rewardDrops = this.add.group({
+      classType: ChestRewardDrop,
+      maxSize: 24
+    });
+    this.magnetizedGems = new Set();
     this.bosses = this.physics.add.group({
       classType: Boss,
       maxSize: 1
@@ -190,7 +201,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   update() {
-    if (this.isLevelingUp || this.isGameOver || this.isPaused) {
+    if (this.isLevelingUp || this.isGameOver || this.isPaused || this.stageCleared) {
       return;
     }
 
@@ -211,7 +222,13 @@ export class MainScene extends Phaser.Scene {
     });
 
     this.updateOrbitWeapons();
+    this.updateMagnetizedGems();
     this.updateGemAttraction();
+    this.updateRewardDrops();
+    if (this.pendingLevelUps > 0 && !this.isLevelingUp && !this.shouldDelayLevelUpMenu()) {
+      this.openLevelUpMenu();
+      return;
+    }
     this.updateSpawnSuppressionState();
     this.updateDifficulty();
     this.updateBossSchedule();
@@ -225,6 +242,7 @@ export class MainScene extends Phaser.Scene {
     if (this.spawnChestEvent) {
       this.spawnChestEvent.remove(false);
     }
+    this.bossWarningEvent?.remove(false);
     this.hideBossDashTelegraph();
   }
 
@@ -578,17 +596,36 @@ export class MainScene extends Phaser.Scene {
 
 
   updateBossSchedule() {
-    if (this.hasActiveBoss()) {
+    if (this.stageCleared || this.pendingBossPhase || this.hasActiveBoss()) {
       return;
     }
 
-    if (this.getElapsedTime() < this.nextBossAt) {
+    const nextPhase = this.bossPhases.find((phase) => !this.bossSpawnFlags[phase.phase] && this.getElapsedTime() >= phase.spawnAt);
+    if (!nextPhase) {
       return;
     }
 
-    this.spawnBoss();
-    this.nextBossAt += BOSS_WAVE_CONFIG.interval;
-    this.emitStats(true);
+    this.pendingBossPhase = nextPhase.phase;
+    this.game.events.emit('boss-warning', {
+      phase: nextPhase.phase,
+      text: nextPhase.warningText,
+      duration: 1600
+    });
+    this.bossWarningEvent?.remove(false);
+    this.bossWarningEvent = this.time.delayedCall(1600, () => {
+      const phaseConfig = this.getBossPhaseConfig(this.pendingBossPhase);
+      if (!phaseConfig || this.isGameOver || this.stageCleared || this.hasActiveBoss()) {
+        this.pendingBossPhase = null;
+        return;
+      }
+
+      this.bossSpawnFlags[phaseConfig.phase] = true;
+      this.currentBossPhase = phaseConfig.phase;
+      this.bossAlive = true;
+      this.pendingBossPhase = null;
+      this.spawnBoss(phaseConfig);
+      this.emitStats(true);
+    });
   }
 
   hasActiveBoss() {
@@ -607,15 +644,23 @@ export class MainScene extends Phaser.Scene {
     return activeBoss;
   }
 
-  spawnBoss() {
+  getBossPhaseConfig(phaseNumber) {
+    return this.bossPhases.find((phase) => phase.phase === phaseNumber) ?? null;
+  }
+
+  spawnBoss(phaseConfig) {
+    if (!phaseConfig) {
+      return;
+    }
+
     this.beginSpawnSuppression();
     const spawnPoint = this.getBossSpawnPoint();
     let boss = this.bosses.getFirstDead(false);
 
     if (boss) {
-      boss.spawn(spawnPoint.x, spawnPoint.y, this.bossConfig);
+      boss.spawn(spawnPoint.x, spawnPoint.y, phaseConfig);
     } else {
-      boss = new Boss(this, spawnPoint.x, spawnPoint.y, this.bossConfig);
+      boss = new Boss(this, spawnPoint.x, spawnPoint.y, phaseConfig);
       this.bosses.add(boss);
     }
   }
@@ -631,11 +676,12 @@ export class MainScene extends Phaser.Scene {
   }
 
   fireBossRandomBullets(boss) {
+    const nodeDistance = boss.bulletNodeDistance ?? 38;
     const nodes = [
-      { x: -38, y: 0 },
-      { x: 38, y: 0 },
-      { x: 0, y: -38 },
-      { x: 0, y: 38 }
+      { x: -nodeDistance, y: 0 },
+      { x: nodeDistance, y: 0 },
+      { x: 0, y: -nodeDistance },
+      { x: 0, y: nodeDistance }
     ];
 
     nodes.forEach((node, nodeIndex) => {
@@ -648,6 +694,8 @@ export class MainScene extends Phaser.Scene {
           speed: boss.bulletSpeed,
           lifeSpan: boss.bulletLifeSpan,
           damage: boss.bulletDamage,
+          homingStrength: boss.bulletHomingStrength ?? 0,
+          target: this.player,
           tint: 0xa6eeff,
           scale: 1,
           bodyRadius: 7
@@ -787,7 +835,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   trySpawnChest() {
-    if (this.isLevelingUp || this.isGameOver || this.isPaused) {
+    if (this.isLevelingUp || this.isGameOver || this.isPaused || this.stageCleared) {
       this.scheduleNextChestSpawn();
       return;
     }
@@ -820,7 +868,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   spawnEnemyWave() {
-    if (this.isLevelingUp || this.isGameOver || this.isSpawnSuppressed()) {
+    if (this.isLevelingUp || this.isGameOver || this.stageCleared || this.isSpawnSuppressed()) {
       return;
     }
 
@@ -1068,6 +1116,51 @@ export class MainScene extends Phaser.Scene {
     });
   }
 
+  updateMagnetizedGems() {
+    if (!this.player?.active || this.magnetizedGems.size === 0) {
+      return;
+    }
+
+    const playerX = this.player.body?.center.x ?? this.player.x;
+    const playerY = this.player.body?.center.y ?? this.player.y;
+    const deltaSeconds = Math.min(0.05, this.game.loop.delta / 1000);
+    const magnetBaseSpeed = this.derivedStats.gemPullSpeed * 1.8;
+
+    this.magnetizedGems.forEach((gem) => {
+      if (!gem?.active) {
+        this.magnetizedGems.delete(gem);
+        return;
+      }
+
+      if (!gem.isMagnetPullActive()) {
+        this.magnetizedGems.delete(gem);
+        gem.stopMotion();
+        return;
+      }
+
+      const dx = playerX - gem.x;
+      const dy = playerY - gem.y;
+      const distanceSq = dx * dx + dy * dy;
+      const collectRadius = Math.max(this.autoCollectRadius, this.player.body?.halfWidth ?? 16) + (gem.collectRadius ?? 0);
+
+      if (distanceSq <= collectRadius * collectRadius) {
+        this.handlePlayerCollectGem(this.player, gem);
+        return;
+      }
+
+      const distance = Math.max(1, Math.sqrt(distanceSq));
+      const speed = magnetBaseSpeed * Phaser.Math.Clamp(1.15 + 220 / distance, 1.2, 3.4);
+      const step = Math.min(distance, speed * deltaSeconds);
+      const directionX = dx / distance;
+      const directionY = dy / distance;
+
+      gem.pullVelocity.set(directionX * speed, directionY * speed);
+      gem.x += directionX * step;
+      gem.y += directionY * step;
+      this.refreshGemGridMembership(gem);
+    });
+  }
+
   updateGemAttraction() {
     const playerX = this.player.body?.center.x ?? this.player.x;
     const playerY = this.player.body?.center.y ?? this.player.y;
@@ -1079,6 +1172,9 @@ export class MainScene extends Phaser.Scene {
     const playerCollectRadius = Math.max(this.autoCollectRadius, this.player.body?.halfWidth ?? 16);
 
     this.forEachNearbyGem(playerX, playerY, gemUpdateRadius, (gem) => {
+      if (gem.isMagnetPullActive?.()) {
+        return;
+      }
       const dx = playerX - gem.x;
       const dy = playerY - gem.y;
       const distanceSq = dx * dx + dy * dy;
@@ -1182,12 +1278,12 @@ export class MainScene extends Phaser.Scene {
 
   findNearestEnemy(maxRange = Number.POSITIVE_INFINITY) {
     let nearestTarget = null;
-    let nearestDistanceSq = Number.POSITIVE_INFINITY;
+    let nearestDistanceScore = Number.POSITIVE_INFINITY;
     const playerX = this.player.x;
     const playerY = this.player.y;
     const maxRangeSq = Number.isFinite(maxRange) ? maxRange * maxRange : Number.POSITIVE_INFINITY;
 
-    const inspectTarget = (target) => {
+    const inspectTarget = (target, priorityBias = 1) => {
       if (!target?.active) {
         return;
       }
@@ -1200,14 +1296,17 @@ export class MainScene extends Phaser.Scene {
         return;
       }
 
-      if (distanceSq < nearestDistanceSq) {
-        nearestDistanceSq = distanceSq;
+      const score = distanceSq * priorityBias;
+
+      if (score < nearestDistanceScore) {
+        nearestDistanceScore = score;
         nearestTarget = target;
       }
     };
 
-    this.bosses.children.iterate(inspectTarget);
-    this.enemies.children.iterate(inspectTarget);
+    this.bosses.children.iterate((target) => inspectTarget(target, 0.92));
+    this.enemies.children.iterate((target) => inspectTarget(target, 1));
+    this.chests.children.iterate((target) => inspectTarget(target, 1.35));
 
     return nearestTarget;
   }
@@ -1357,9 +1456,17 @@ export class MainScene extends Phaser.Scene {
     }
 
     this.hideBossDashTelegraph();
+    this.bossAlive = false;
     boss.deactivate();
-    this.normalSpawnResumeAt = this.time.now + this.bossSpawnGraceDuration;
     this.bossProjectiles.children.iterate((projectile) => projectile?.disableProjectile?.());
+
+    if (this.currentBossPhase >= this.bossPhases.length) {
+      this.triggerStageClear();
+      return;
+    }
+
+    this.normalSpawnResumeAt = this.time.now + this.bossSpawnGraceDuration;
+    this.emitStats(true);
   }
 
   handleBossProjectileHitPlayer(player, projectile) {
@@ -1447,17 +1554,19 @@ export class MainScene extends Phaser.Scene {
     }
 
     const opened = chest.registerHit();
-
     if (!opened) {
       return false;
     }
 
-    const rewardKey = getRewardKey(chest.typeKey);
     const chestType = CHEST_TYPES[chest.typeKey];
-    const rewardResult = this.applyChestReward(chestType, rewardKey);
+    const rewardKey = getRewardKey(chest.typeKey);
+    const rewardType = REWARD_TYPES[rewardKey];
+    const dropX = chest.x + Phaser.Math.Between(-8, 8);
+    const dropY = chest.y + Phaser.Math.Between(-6, 6);
 
     chest.deactivate();
-    this.showChestReward(chest, chestType, rewardKey, rewardResult);
+    this.spawnChestRewardDrop(dropX, dropY, rewardType, chestType);
+    this.showChestRewardDropSpawn(dropX, dropY, chestType, rewardType);
     this.emitStats(true);
     return true;
   }
@@ -1468,6 +1577,7 @@ export class MainScene extends Phaser.Scene {
     }
 
     this.unregisterGemFromGrid(gem);
+    this.magnetizedGems.delete(gem);
     const value = gem.value;
     gem.collect();
     this.gainExperience(value);
@@ -1487,7 +1597,66 @@ export class MainScene extends Phaser.Scene {
     this.registerGemInGrid(gem);
   }
 
-  applyChestReward(chestType, rewardKey) {
+  spawnChestRewardDrop(x, y, rewardType, chestType) {
+    let drop = this.rewardDrops.getFirstDead(false);
+
+    if (!drop) {
+      drop = new ChestRewardDrop(this, x, y);
+      this.rewardDrops.add(drop);
+    }
+
+    drop.spawn(x, y, rewardType, chestType);
+    return drop;
+  }
+
+  updateRewardDrops() {
+    if (!this.player?.active) {
+      return;
+    }
+
+    const playerX = this.player.x;
+    const playerY = this.player.y;
+    const pickupRadius = (this.player.body?.halfWidth ?? 16) + 12;
+
+    this.rewardDrops.children.iterate((drop) => {
+      if (!drop?.active) {
+        return;
+      }
+
+      drop.updateFloat(this.time.now);
+
+      if (this.time.now < (drop.pickupReadyAt ?? 0)) {
+        return;
+      }
+
+      const dx = playerX - drop.x;
+      const dy = playerY - drop.y;
+      const collectRadius = pickupRadius + (drop.collectRadius ?? 0);
+
+      if (dx * dx + dy * dy <= collectRadius * collectRadius) {
+        this.handlePlayerCollectRewardDrop(drop);
+      }
+    });
+  }
+
+  handlePlayerCollectRewardDrop(drop) {
+    if (!drop?.active || this.isGameOver) {
+      return;
+    }
+
+    const rewardType = drop.rewardType;
+    const result = this.applyChestReward(drop.chestTypeKey, drop.rewardKey);
+    const x = drop.x;
+    const y = drop.y;
+
+    drop.collect();
+    this.showChestRewardPickup(x, y, rewardType, result);
+    this.emitStats(true);
+  }
+
+  applyChestReward(chestTypeKey, rewardKey) {
+    const chestType = CHEST_TYPES[chestTypeKey];
+
     if (rewardKey === 'potion') {
       const potionReward = chestType.rewards.potion;
       const missingHealth = this.player.maxHealth - this.player.health;
@@ -1495,41 +1664,43 @@ export class MainScene extends Phaser.Scene {
       if (potionReward.fullHeal) {
         if (missingHealth > 0) {
           this.player.health = this.player.maxHealth;
-          return { amount: missingHealth, suffix: '生命' };
+          return { amount: missingHealth, suffix: '生命', mode: 'heal' };
         }
 
-        this.player.addShield(potionReward.shieldOnFull ?? 0);
-        return { amount: potionReward.shieldOnFull ?? 0, suffix: '護盾' };
+        const shieldAmount = potionReward.shieldOnFull ?? 0;
+        this.player.addShield(shieldAmount);
+        return { amount: shieldAmount, suffix: '護盾', mode: 'shield' };
       }
 
       if (missingHealth > 0) {
         const healAmount = Math.min(missingHealth, potionReward.heal ?? 0);
         this.player.health += healAmount;
-        return { amount: healAmount, suffix: '生命' };
+        return { amount: healAmount, suffix: '生命', mode: 'heal' };
       }
 
-      this.player.addShield(potionReward.shieldOnFull ?? 0);
-      return { amount: potionReward.shieldOnFull ?? 0, suffix: '護盾' };
+      const shieldAmount = potionReward.shieldOnFull ?? 0;
+      this.player.addShield(shieldAmount);
+      return { amount: shieldAmount, suffix: '護盾', mode: 'shield' };
     }
 
     if (rewardKey === 'gold') {
       const goldAmount = getGoldRewardAmount(chestType.key, this.getElapsedTime(), this.currentDifficultyStage.stage);
       this.gold += goldAmount;
-      return { amount: goldAmount, suffix: '金幣' };
+      return { amount: goldAmount, suffix: '金幣', mode: 'gold' };
     }
 
     const magnetRadius = chestType.rewards.magnet.radius;
-    const collected = this.collectExperienceByMagnet(magnetRadius);
-    return { amount: collected, suffix: '經驗' };
+    const collectedExp = this.collectExperienceByMagnet(magnetRadius);
+    return { amount: collectedExp, suffix: '經驗', mode: 'magnet' };
   }
 
   collectExperienceByMagnet(radius) {
-    const gemsToCollect = [];
+    const targetedGems = [];
 
     if (!Number.isFinite(radius)) {
       this.experienceGems.children.iterate((gem) => {
         if (gem?.active) {
-          gemsToCollect.push(gem);
+          targetedGems.push(gem);
         }
       });
     } else {
@@ -1538,27 +1709,29 @@ export class MainScene extends Phaser.Scene {
         const dy = this.player.y - gem.y;
 
         if (dx * dx + dy * dy <= radius * radius) {
-          gemsToCollect.push(gem);
+          targetedGems.push(gem);
         }
       });
     }
 
-    let collectedCount = 0;
+    let attractedExp = 0;
 
-    gemsToCollect.forEach((gem) => {
-      if (gem?.active) {
-        this.handlePlayerCollectGem(this.player, gem);
-        collectedCount += 1;
+    targetedGems.forEach((gem) => {
+      if (!gem?.active) {
+        return;
       }
+
+      attractedExp += gem.value ?? 0;
+      gem.startMagnetPull(4.6);
+      this.magnetizedGems.add(gem);
     });
 
-    return collectedCount;
+    return attractedExp;
   }
 
-  showChestReward(chest, chestType, rewardKey, rewardResult) {
-    const rewardName = REWARD_TYPES[rewardKey].name;
+  showChestRewardDropSpawn(x, y, chestType, rewardType) {
     const fx = chestType.openFx;
-    const pulse = this.add.circle(chest.x, chest.y, fx.radius * 0.42, fx.color, 0.35);
+    const pulse = this.add.circle(x, y, fx.radius * 0.42, fx.color, 0.35);
     pulse.setDepth(5);
 
     this.tweens.add({
@@ -1572,7 +1745,7 @@ export class MainScene extends Phaser.Scene {
     });
 
     if (chestType.key === 'gold') {
-      const ring = this.add.circle(chest.x, chest.y, fx.radius * 0.72, fx.color, 0.16);
+      const ring = this.add.circle(x, y, fx.radius * 0.72, fx.color, 0.16);
       ring.setDepth(5);
       this.tweens.add({
         targets: ring,
@@ -1586,11 +1759,7 @@ export class MainScene extends Phaser.Scene {
       this.cameras.main.shake(120, 0.0032);
     }
 
-    const detail = rewardKey === 'magnet'
-      ? `${rewardName} 吸收 ${rewardResult.amount} 經驗`
-      : `${rewardName} +${rewardResult.amount} ${rewardResult.suffix}`;
-
-    const text = this.add.text(chest.x, chest.y - 22, `${chestType.name}\n${detail}`, {
+    const text = this.add.text(x, y - 24, `${chestType.name}\n掉落：${rewardType.name}`, {
       fontFamily: 'Trebuchet MS',
       fontSize: chestType.key === 'gold' ? '17px' : '14px',
       align: 'center',
@@ -1601,7 +1770,7 @@ export class MainScene extends Phaser.Scene {
 
     this.tweens.add({
       targets: text,
-      y: text.y - 26,
+      y: text.y - 22,
       alpha: 0,
       duration: chestType.key === 'gold' ? 1100 : 800,
       ease: 'Sine.Out',
@@ -1610,10 +1779,42 @@ export class MainScene extends Phaser.Scene {
 
     this.lastChestReward = {
       chestType: chestType.name,
-      rewardKey,
-      rewardName,
-      amount: rewardResult.amount
+      rewardKey: rewardType.key,
+      rewardName: rewardType.name,
+      amount: 0
     };
+  }
+
+  showChestRewardPickup(x, y, rewardType, rewardResult) {
+    const color = rewardResult.mode === 'heal'
+      ? '#ffd2da'
+      : rewardResult.mode === 'shield'
+        ? '#bfefff'
+        : rewardResult.mode === 'gold'
+          ? '#ffe39a'
+          : '#bdf7ff';
+
+    const detail = rewardResult.mode === 'magnet'
+      ? `${rewardType.name} 吸收 ${rewardResult.amount} ${rewardResult.suffix}`
+      : `${rewardType.name} +${rewardResult.amount} ${rewardResult.suffix}`;
+
+    const text = this.add.text(x, y - 18, detail, {
+      fontFamily: 'Trebuchet MS',
+      fontSize: '14px',
+      color,
+      align: 'center',
+      stroke: '#10202b',
+      strokeThickness: 3
+    }).setOrigin(0.5).setDepth(6);
+
+    this.tweens.add({
+      targets: text,
+      y: text.y - 24,
+      alpha: 0,
+      duration: 760,
+      ease: 'Sine.Out',
+      onComplete: () => text.destroy()
+    });
   }
 
   gainExperience(amount) {
@@ -1628,9 +1829,23 @@ export class MainScene extends Phaser.Scene {
 
     this.emitStats(true);
 
-    if (this.pendingLevelUps > 0 && !this.isLevelingUp) {
+    if (this.pendingLevelUps > 0 && !this.isLevelingUp && !this.shouldDelayLevelUpMenu()) {
       this.openLevelUpMenu();
     }
+  }
+
+  shouldDelayLevelUpMenu() {
+    let hasMagnetizedGem = false;
+
+    this.magnetizedGems.forEach((gem) => {
+      if (gem?.active && gem.isMagnetPullActive?.()) {
+        hasMagnetizedGem = true;
+      } else if (!gem?.active) {
+        this.magnetizedGems.delete(gem);
+      }
+    });
+
+    return hasMagnetizedGem;
   }
 
   openLevelUpMenu() {
@@ -1815,9 +2030,37 @@ export class MainScene extends Phaser.Scene {
     this.game.events.emit('level-up-closed');
     this.emitStats(true);
 
-    if (this.pendingLevelUps > 0) {
+    if (this.pendingLevelUps > 0 && !this.shouldDelayLevelUpMenu()) {
       this.openLevelUpMenu();
     }
+  }
+
+  triggerStageClear() {
+    if (this.stageCleared) {
+      return;
+    }
+    this.stageCleared = true;
+    this.isPaused = false;
+    this.bossAlive = false;
+    this.pendingBossPhase = null;
+    this.bossWarningEvent?.remove(false);
+    this.bossWarningEvent = null;
+    this.spawnEnemyEvent?.remove(false);
+    this.spawnChestEvent?.remove(false);
+    this.hideBossDashTelegraph();
+    this.bossProjectiles.children.iterate((projectile) => projectile?.disableProjectile?.());
+    this.physics.world.pause();
+    this.player.setVelocity(0, 0);
+    this.game.events.emit('level-up-closed');
+    this.game.events.emit('stage-clear', {
+      time: this.getElapsedTime(),
+      level: this.level,
+      kills: this.kills,
+      gold: this.gold,
+      bossPhase: this.currentBossPhase
+    });
+    this.emitStats(true);
+    this.scene.pause();
   }
 
   triggerGameOver() {
@@ -1837,6 +2080,20 @@ export class MainScene extends Phaser.Scene {
 
   restartRun() {
     this.isPaused = false;
+    this.isGameOver = false;
+    this.stageCleared = false;
+    this.bossAlive = false;
+    this.pendingBossPhase = null;
+    this.currentBossPhase = 0;
+    this.bossSpawnFlags = Object.fromEntries(this.bossPhases.map((phase) => [phase.phase, false]));
+    this.normalSpawnResumeAt = 0;
+    this.spawnSuppressionStartedAt = null;
+    this.totalSpawnSuppressedMs = 0;
+    this.bossWarningEvent?.remove(false);
+    this.bossWarningEvent = null;
+    this.bossProjectiles.children.iterate((projectile) => projectile?.disableProjectile?.());
+    const activeBoss = this.getActiveBoss();
+    activeBoss?.deactivate?.();
     this.time.timeScale = 1;
     this.physics.world.resume();
     this.game.events.emit('pause-state-changed', { paused: false });
@@ -1871,6 +2128,8 @@ export class MainScene extends Phaser.Scene {
       time: this.getElapsedTime(),
       isLevelingUp: this.isLevelingUp,
       isGameOver: this.isGameOver,
+      stageCleared: this.stageCleared,
+      currentBossPhase: this.currentBossPhase,
       isPaused: this.isPaused,
       boss: activeBoss ? {
         name: activeBoss.name,
@@ -1880,20 +2139,5 @@ export class MainScene extends Phaser.Scene {
     });
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

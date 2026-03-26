@@ -2,7 +2,7 @@
   normal: {
     key: 'normal',
     name: 'Wisp Drifter',
-    speed: 78,
+    speed: 72,
     maxHealth: 3,
     experienceValue: 1,
     contactDamage: 1,
@@ -12,7 +12,7 @@
   fast: {
     key: 'fast',
     name: 'Needle Shade',
-    speed: 132,
+    speed: 122,
     maxHealth: 1,
     experienceValue: 1,
     contactDamage: 1,
@@ -22,7 +22,7 @@
   tank: {
     key: 'tank',
     name: 'Iron Bloom',
-    speed: 48,
+    speed: 44,
     maxHealth: 6,
     experienceValue: 3,
     contactDamage: 2,
@@ -31,33 +31,89 @@
   }
 };
 
-export const BOSS_TYPE = {
-  key: 'boss',
-  name: '星核暴君',
-  speed: 68,
-  maxHealth: 180,
-  experienceValue: 20,
-  contactDamage: 2,
-  tint: 0x6dd3ff,
-  scale: 2.5,
-  dashSpeed: 340,
-  dashChargeDuration: 650,
-  dashDuration: 700,
-  dashCooldown: 5200,
-  shockwaveDelay: 520,
-  shockwaveRadius: 108,
-  shockwaveDamage: 2,
-  bulletBurstCooldown: 3600,
-  bulletSpeed: 210,
-  bulletLifeSpan: 2600,
-  bulletDamage: 1,
-  bulletCountPerNode: 2
-};
-
-export const BOSS_WAVE_CONFIG = {
-  firstSpawnAt: 90,
-  interval: 120
-};
+export const BOSS_PHASES = [
+  {
+    phase: 1,
+    spawnAt: 150,
+    warningText: 'WARNING\nBoss Stage 1',
+    key: 'boss_phase_1',
+    name: '星核暴君 I',
+    speed: 68,
+    maxHealth: 180,
+    experienceValue: 20,
+    contactDamage: 2,
+    tint: 0x6dd3ff,
+    scale: 2.5,
+    dashSpeed: 340,
+    dashChargeDuration: 650,
+    dashDuration: 700,
+    dashCooldown: 5200,
+    shockwaveDelay: 520,
+    shockwaveRadius: 108,
+    shockwaveDamage: 2,
+    bulletBurstCooldown: 3600,
+    bulletSpeed: 210,
+    bulletLifeSpan: 2600,
+    bulletDamage: 1,
+    bulletCountPerNode: 2,
+    bulletHomingStrength: 0,
+    bulletNodeDistance: 38
+  },
+  {
+    phase: 2,
+    spawnAt: 300,
+    warningText: 'WARNING\nBoss Stage 2',
+    key: 'boss_phase_2',
+    name: '星核暴君 II',
+    speed: 72,
+    maxHealth: 250,
+    experienceValue: 26,
+    contactDamage: 2,
+    tint: 0x82ddff,
+    scale: 2.9,
+    dashSpeed: 420,
+    dashChargeDuration: 560,
+    dashDuration: 720,
+    dashCooldown: 4600,
+    shockwaveDelay: 480,
+    shockwaveRadius: 126,
+    shockwaveDamage: 2,
+    bulletBurstCooldown: 3000,
+    bulletSpeed: 235,
+    bulletLifeSpan: 2800,
+    bulletDamage: 1,
+    bulletCountPerNode: 3,
+    bulletHomingStrength: 0,
+    bulletNodeDistance: 42
+  },
+  {
+    phase: 3,
+    spawnAt: 420,
+    warningText: 'WARNING\nBoss Stage 3',
+    key: 'boss_phase_3',
+    name: '星核暴君 III',
+    speed: 74,
+    maxHealth: 320,
+    experienceValue: 36,
+    contactDamage: 3,
+    tint: 0x9ae5ff,
+    scale: 2.9,
+    dashSpeed: 450,
+    dashChargeDuration: 520,
+    dashDuration: 760,
+    dashCooldown: 4200,
+    shockwaveDelay: 420,
+    shockwaveRadius: 126,
+    shockwaveDamage: 3,
+    bulletBurstCooldown: 2800,
+    bulletSpeed: 245,
+    bulletLifeSpan: 3200,
+    bulletDamage: 1,
+    bulletCountPerNode: 3,
+    bulletHomingStrength: 0.032,
+    bulletNodeDistance: 42
+  }
+];
 
 export const DIFFICULTY_STAGES = [
   {
@@ -121,3 +177,4 @@ export const DIFFICULTY_STAGES = [
     }
   }
 ];
+

@@ -9,6 +9,8 @@ export class ExperienceGem extends Phaser.GameObjects.Image {
     this.baseRadius = 10;
     this.collectRadius = this.baseRadius;
     this.pullVelocity = new Phaser.Math.Vector2(0, 0);
+    this.isMagnetized = false;
+    this.magnetSpeedMultiplier = 1;
 
     this.spawn(x, y, value);
   }
@@ -18,6 +20,9 @@ export class ExperienceGem extends Phaser.GameObjects.Image {
     this.setVisible(true);
     this.setPosition(x, y);
     this.stopMotion();
+    this.clearTint();
+    this.isMagnetized = false;
+    this.magnetSpeedMultiplier = 1;
     this.setGemValue(value);
     return this;
   }
@@ -37,8 +42,25 @@ export class ExperienceGem extends Phaser.GameObjects.Image {
     this.setGemValue(this.value + amount);
   }
 
+  startMagnetPull(speedMultiplier = 3.6) {
+    this.isMagnetized = true;
+    this.magnetSpeedMultiplier = Math.max(this.magnetSpeedMultiplier, speedMultiplier);
+    this.setTint(0xd9fff6);
+  }
+
+  isMagnetPullActive() {
+    return this.active && this.isMagnetized;
+  }
+
+  clearMagnetPull() {
+    this.isMagnetized = false;
+    this.magnetSpeedMultiplier = 1;
+    this.clearTint();
+  }
+
   pullToward(directionX, directionY, speed, deltaSeconds) {
-    this.pullVelocity.set(directionX * speed, directionY * speed);
+    const boostedSpeed = speed * this.magnetSpeedMultiplier;
+    this.pullVelocity.set(directionX * boostedSpeed, directionY * boostedSpeed);
     this.x += this.pullVelocity.x * deltaSeconds;
     this.y += this.pullVelocity.y * deltaSeconds;
   }
@@ -49,6 +71,7 @@ export class ExperienceGem extends Phaser.GameObjects.Image {
 
   collect() {
     this.stopMotion();
+    this.clearMagnetPull();
     this.setActive(false);
     this.setVisible(false);
   }

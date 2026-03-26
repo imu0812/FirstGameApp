@@ -10,6 +10,9 @@ export class BossProjectile extends Phaser.Physics.Arcade.Sprite {
     this.damage = 1;
     this.lifeSpan = 2400;
     this.spawnTime = 0;
+    this.speed = 0;
+    this.homingStrength = 0;
+    this.target = null;
 
     this.setActive(false);
     this.setVisible(false);
@@ -29,9 +32,12 @@ export class BossProjectile extends Phaser.Physics.Arcade.Sprite {
 
     this.damage = config.damage ?? 1;
     this.lifeSpan = config.lifeSpan ?? 2400;
+    this.speed = config.speed ?? 220;
+    this.homingStrength = config.homingStrength ?? 0;
+    this.target = config.target ?? null;
     this.spawnTime = this.scene.time.now;
     this.rotation = config.angle;
-    this.scene.physics.velocityFromRotation(config.angle, config.speed, this.body.velocity);
+    this.scene.physics.velocityFromRotation(config.angle, this.speed, this.body.velocity);
   }
 
   preUpdate(time, delta) {
@@ -41,12 +47,23 @@ export class BossProjectile extends Phaser.Physics.Arcade.Sprite {
       return;
     }
 
+    if (this.homingStrength > 0 && this.target?.active) {
+      const desiredAngle = Phaser.Math.Angle.Between(this.x, this.y, this.target.x, this.target.y);
+      const currentAngle = this.body.velocity.angle();
+      const nextAngle = Phaser.Math.Angle.RotateTo(currentAngle, desiredAngle, this.homingStrength);
+      this.rotation = nextAngle;
+      this.scene.physics.velocityFromRotation(nextAngle, this.speed, this.body.velocity);
+    }
+
     if (time - this.spawnTime >= this.lifeSpan) {
       this.disableProjectile();
     }
   }
 
   disableProjectile() {
+    this.target = null;
+    this.homingStrength = 0;
+    this.speed = 0;
     this.setVelocity(0, 0);
     this.disableBody(true, true);
   }

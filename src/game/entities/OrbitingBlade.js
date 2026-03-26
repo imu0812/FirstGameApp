@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+﻿import Phaser from 'phaser';
 
 export class OrbitingBlade extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {
@@ -9,6 +9,8 @@ export class OrbitingBlade extends Phaser.Physics.Arcade.Sprite {
 
     this.hitTracker = new Map();
     this.body.setAllowGravity(false);
+    this.body.setImmovable(true);
+    this.body.moves = false;
     this.deactivate();
   }
 
@@ -25,7 +27,13 @@ export class OrbitingBlade extends Phaser.Physics.Arcade.Sprite {
     this.setVelocity(0, 0);
     this.setTint(config.tint);
     this.setScale(config.scale ?? 1);
-    this.body.setCircle(12 * (config.scale ?? 1));
+
+    const bodyRadius = 12 * (config.scale ?? 1);
+    this.body.setCircle(bodyRadius);
+    this.body.setOffset(this.width * 0.5 - bodyRadius, this.height * 0.5 - bodyRadius);
+    this.body.moves = false;
+    this.body.setImmovable(true);
+    this.body.reset(x, y);
 
     return this;
   }
@@ -35,11 +43,12 @@ export class OrbitingBlade extends Phaser.Physics.Arcade.Sprite {
       return;
     }
 
-    const angle = elapsedSeconds * this.orbitSpeed + index * ((Math.PI * 2) / total);
-    this.setPosition(
-      player.x + Math.cos(angle) * this.radius,
-      player.y + Math.sin(angle) * this.radius
-    );
+    const angle = elapsedSeconds * this.orbitSpeed + index * ((Math.PI * 2) / Math.max(1, total));
+    const nextX = player.x + Math.cos(angle) * this.radius;
+    const nextY = player.y + Math.sin(angle) * this.radius;
+
+    this.setPosition(nextX, nextY);
+    this.body.reset(nextX, nextY);
     this.rotation = angle + Math.PI / 2;
   }
 

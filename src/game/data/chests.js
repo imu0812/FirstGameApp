@@ -1,8 +1,31 @@
 ﻿export const REWARD_TYPES = {
-  potion: { key: 'potion', name: '藥水瓶' },
-  gold: { key: 'gold', name: '金幣' },
-  magnet: { key: 'magnet', name: 'U 型磁鐵' }
+  potion: {
+    key: 'potion',
+    name: '藥水瓶',
+    texture: 'reward_potion',
+    weight: 1,
+    tint: 0xff7f96
+  },
+  gold: {
+    key: 'gold',
+    name: '金幣',
+    texture: 'reward_gold',
+    weight: 1,
+    tint: 0xffd86b
+  },
+  magnet: {
+    key: 'magnet',
+    name: 'U 型磁鐵',
+    texture: 'reward_magnet',
+    weight: 1,
+    tint: 0x8ee8ff
+  }
 };
+
+const DEFAULT_REWARD_POOL = Object.values(REWARD_TYPES).map((reward) => ({
+  key: reward.key,
+  weight: reward.weight
+}));
 
 export const CHEST_TYPES = {
   bronze: {
@@ -11,11 +34,7 @@ export const CHEST_TYPES = {
     texture: 'chest_bronze',
     scale: 1,
     hitsToOpen: 1,
-    rewardPool: [
-      { key: 'potion', weight: 34 },
-      { key: 'gold', weight: 44 },
-      { key: 'magnet', weight: 22 }
-    ],
+    rewardPool: DEFAULT_REWARD_POOL,
     rewards: {
       potion: { heal: 1, shieldOnFull: 1 },
       gold: { base: 12, timeScale: 0.14, stageScale: 3 },
@@ -29,11 +48,7 @@ export const CHEST_TYPES = {
     texture: 'chest_silver',
     scale: 1.04,
     hitsToOpen: 2,
-    rewardPool: [
-      { key: 'potion', weight: 30 },
-      { key: 'gold', weight: 38 },
-      { key: 'magnet', weight: 32 }
-    ],
+    rewardPool: DEFAULT_REWARD_POOL,
     rewards: {
       potion: { heal: 3, shieldOnFull: 2 },
       gold: { base: 26, timeScale: 0.22, stageScale: 5 },
@@ -47,11 +62,7 @@ export const CHEST_TYPES = {
     texture: 'chest_gold',
     scale: 1.1,
     hitsToOpen: 3,
-    rewardPool: [
-      { key: 'potion', weight: 24 },
-      { key: 'gold', weight: 36 },
-      { key: 'magnet', weight: 40 }
-    ],
+    rewardPool: DEFAULT_REWARD_POOL,
     rewards: {
       potion: { fullHeal: true, shieldOnFull: 4 },
       gold: { base: 54, timeScale: 0.34, stageScale: 9 },
@@ -131,3 +142,4 @@ export function getGoldRewardAmount(chestTypeKey, elapsedSeconds, difficultyStag
     Math.round(reward.base + elapsedSeconds * reward.timeScale + difficultyStage * reward.stageScale)
   );
 }
+
