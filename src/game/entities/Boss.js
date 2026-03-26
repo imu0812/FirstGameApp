@@ -39,11 +39,14 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     this.bulletCountPerNode = config.bulletCountPerNode;
     this.bulletHomingStrength = config.bulletHomingStrength ?? 0;
     this.bulletNodeDistance = config.bulletNodeDistance ?? 38;
+    this.hitboxRadiusFactor = config.hitboxRadiusFactor ?? 0.28;
+    this.spawnProtectionMs = config.spawnProtectionMs ?? 0;
     this.dashAngle = 0;
     this.dashChargeEndAt = 0;
     this.dashEndAt = 0;
-    this.nextDashAt = this.scene.time.now + 1800;
-    this.nextBurstAt = this.scene.time.now + 2600;
+    this.nextDashAt = this.scene.time.now + (config.initialDashDelay ?? 1800);
+    this.nextBurstAt = this.scene.time.now + (config.initialBurstDelay ?? 2600);
+    this.invulnerableUntil = this.scene.time.now + this.spawnProtectionMs;
     this.state = 'idle';
     this.slowMultiplier = 1;
     this.slowUntil = 0;
@@ -61,7 +64,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
   }
 
   updateHitbox() {
-    const radius = Math.max(20, Math.round(13 * (this.scaleX ?? 1)));
+    const radius = Math.max(18, Math.round(this.displayWidth * this.hitboxRadiusFactor));
     this.setCircle(radius, this.width * 0.5 - radius, this.height * 0.5 - radius);
   }
 
@@ -70,6 +73,12 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
       this.setVelocity(0, 0);
       this.scene.hideBossDashTelegraph();
       return;
+    }
+
+    if (time < this.invulnerableUntil) {
+      this.setAlpha(0.72 + Math.sin(time * 0.025) * 0.18);
+    } else {
+      this.setAlpha(1);
     }
 
     if (time >= this.slowUntil) {
@@ -124,7 +133,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     this.state = 'dashing';
     this.dashEndAt = time + this.dashDuration;
     this.nextDashAt = time + this.dashCooldown;
-    this.nextBurstAt = Math.max(this.nextBurstAt, this.dashEndAt + this.shockwaveDelay + 1000);
+    this.nextBurstAt = Math.max(this.nextBurstAt, this.dashEndAt + this.shockwaveDelay + 900);
     this.shockwaveTimer?.remove(false);
     this.shockwaveTimer = this.scene.time.delayedCall(
       this.dashDuration + this.shockwaveDelay,
@@ -151,6 +160,10 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
   }
 
   takeDamage(amount) {
+    if (this.scene.time.now < this.invulnerableUntil) {
+      return false;
+    }
+
     this.health -= amount;
     return this.health <= 0;
   }
@@ -165,8 +178,10 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     this.dashAngle = 0;
     this.dashChargeEndAt = 0;
     this.dashEndAt = 0;
+    this.invulnerableUntil = 0;
     this.disableBody(true, true);
     this.setVelocity(0, 0);
     this.setTint(this.baseTint ?? 0xffffff);
+    this.setAlpha(1);
   }
 }

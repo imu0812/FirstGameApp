@@ -17,7 +17,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    this.setCircle(16);
+    this.setCircle(13, 3, 3);
     this.setCollideWorldBounds(false);
 
     this.controls = scene.input.keyboard.addKeys({
@@ -140,3 +140,4 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setAlpha(1);
   }
 }
+

@@ -8,7 +8,7 @@ import { ExperienceGem } from '../entities/ExperienceGem.js';
 import { OrbitingBlade } from '../entities/OrbitingBlade.js';
 import { Chest } from '../entities/Chest.js';
 import { ChestRewardDrop } from '../entities/ChestRewardDrop.js';
-import { BOSS_PHASES, DIFFICULTY_STAGES, ENEMY_TYPES } from '../data/enemyTypes.js';
+import { BOSS_PHASES, DIFFICULTY_STAGES, ENEMY_BALANCE, ENEMY_TYPES } from '../data/enemyTypes.js';
 import {
   PASSIVE_DEFS,
   WEAPON_DEFS,
@@ -79,6 +79,10 @@ export class MainScene extends Phaser.Scene {
     this.updatePlayerStatusBar();
     this.bossDashTelegraph.setDepth(2);
     this.bossDashTelegraph.setVisible(false);
+    this.debugHitboxesEnabled = Boolean(ENEMY_BALANCE.debugHitboxes);
+    this.debugHitboxGraphics = this.add.graphics();
+    this.debugHitboxGraphics.setDepth(18);
+    this.debugHitboxGraphics.setVisible(this.debugHitboxesEnabled);
 
     this.enemies = this.physics.add.group({
       classType: Enemy,
@@ -211,7 +215,7 @@ export class MainScene extends Phaser.Scene {
 
     this.enemies.children.iterate((enemy) => {
       if (enemy?.active) {
-        enemy.update(this.player);
+        enemy.update(this.player, this.time.now);
       }
     });
 
@@ -232,6 +236,7 @@ export class MainScene extends Phaser.Scene {
     this.updateSpawnSuppressionState();
     this.updateDifficulty();
     this.updateBossSchedule();
+    this.updateDebugHitboxes();
     this.emitStats();
   }
 
@@ -244,6 +249,8 @@ export class MainScene extends Phaser.Scene {
     }
     this.bossWarningEvent?.remove(false);
     this.hideBossDashTelegraph();
+    this.debugHitboxGraphics?.clear();
+    this.debugHitboxGraphics?.destroy();
   }
 
 
@@ -580,6 +587,34 @@ export class MainScene extends Phaser.Scene {
     this.bossDashTelegraph.clear();
     this.bossDashTelegraph.setVisible(false);
   }
+
+  updateDebugHitboxes() {
+    if (!this.debugHitboxGraphics) {
+      return;
+    }
+
+    this.debugHitboxGraphics.clear();
+
+    if (!this.debugHitboxesEnabled) {
+      return;
+    }
+
+    this.drawBodyHitbox(this.player, 0x7ef9ff);
+    this.enemies.children.iterate((enemy) => this.drawBodyHitbox(enemy, enemy?.isElite ? 0xffc266 : 0xff7b72));
+    this.bosses.children.iterate((boss) => this.drawBodyHitbox(boss, 0x6dd3ff));
+  }
+
+  drawBodyHitbox(target, color) {
+    if (!target?.active || !target.body) {
+      return;
+    }
+
+    const body = target.body;
+    const radius = body.halfWidth ?? 0;
+    this.debugHitboxGraphics.lineStyle(1, color, 0.95);
+    this.debugHitboxGraphics.strokeCircle(body.center.x, body.center.y, radius);
+  }
+
   updateDifficulty() {
     const elapsedSeconds = this.getElapsedTime();
     const targetStage = this.getDifficultyStageForTime(elapsedSeconds);
@@ -655,141 +690,15 @@ export class MainScene extends Phaser.Scene {
 
     this.beginSpawnSuppression();
     const spawnPoint = this.getBossSpawnPoint();
+    const scaledBossConfig = this.buildScaledBossConfig(phaseConfig);
     let boss = this.bosses.getFirstDead(false);
 
     if (boss) {
-      boss.spawn(spawnPoint.x, spawnPoint.y, phaseConfig);
+      boss.spawn(spawnPoint.x, spawnPoint.y, scaledBossConfig);
     } else {
-      boss = new Boss(this, spawnPoint.x, spawnPoint.y, phaseConfig);
+      boss = new Boss(this, spawnPoint.x, spawnPoint.y, scaledBossConfig);
       this.bosses.add(boss);
     }
-  }
-
-  getBossSpawnPoint() {
-    const spawnDistance = Phaser.Math.Between(420, 520);
-    const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
-
-    return {
-      x: this.player.x + Math.cos(angle) * spawnDistance,
-      y: this.player.y + Math.sin(angle) * spawnDistance
-    };
-  }
-
-  fireBossRandomBullets(boss) {
-    const nodeDistance = boss.bulletNodeDistance ?? 38;
-    const nodes = [
-      { x: -nodeDistance, y: 0 },
-      { x: nodeDistance, y: 0 },
-      { x: 0, y: -nodeDistance },
-      { x: 0, y: nodeDistance }
-    ];
-
-    nodes.forEach((node, nodeIndex) => {
-      for (let index = 0; index < boss.bulletCountPerNode; index += 1) {
-        const angle = Phaser.Math.FloatBetween(0, Math.PI * 2) + nodeIndex * 0.12;
-        this.spawnBossProjectile({
-          x: boss.x + node.x,
-          y: boss.y + node.y,
-          angle,
-          speed: boss.bulletSpeed,
-          lifeSpan: boss.bulletLifeSpan,
-          damage: boss.bulletDamage,
-          homingStrength: boss.bulletHomingStrength ?? 0,
-          target: this.player,
-          tint: 0xa6eeff,
-          scale: 1,
-          bodyRadius: 7
-        });
-      }
-    });
-  }
-
-  spawnBossProjectile(config) {
-    let projectile = this.bossProjectiles.getFirstDead(false);
-
-    if (!projectile) {
-      projectile = new BossProjectile(this, config.x, config.y);
-      this.bossProjectiles.add(projectile);
-    }
-
-    projectile.fire(config);
-  }
-
-  triggerBossShockwave(boss) {
-    this.createShockwaveEffect(boss.x, boss.y, boss.shockwaveRadius);
-
-    const dx = this.player.x - boss.x;
-    const dy = this.player.y - boss.y;
-    const distanceSq = dx * dx + dy * dy;
-
-    if (distanceSq <= boss.shockwaveRadius * boss.shockwaveRadius) {
-      const tookDamage = this.player.takeDamage(boss.shockwaveDamage, this.time.now);
-
-      if (tookDamage) {
-        this.handlePlayerDamageFeedback();
-        this.emitStats(true);
-
-        if (this.player.health <= 0) {
-          this.triggerGameOver();
-        }
-      }
-    }
-  }
-
-  createShockwaveEffect(x, y, radius) {
-    const pulse = this.add.circle(x, y, radius * 0.28, 0x9ae5ff, 0.34);
-    pulse.setDepth(4);
-
-    this.tweens.add({
-      targets: pulse,
-      alpha: 0,
-      scaleX: 1.95,
-      scaleY: 1.95,
-      duration: 260,
-      ease: 'Quad.Out',
-      onComplete: () => pulse.destroy()
-    });
-  }
-
-  getElapsedTime() {
-    return (this.time.now - this.survivalStartTime) / 1000;
-  }
-
-  beginSpawnSuppression(resumeAt = Number.POSITIVE_INFINITY) {
-    if (this.spawnSuppressionStartedAt === null) {
-      this.spawnSuppressionStartedAt = this.time.now;
-    }
-
-    this.normalSpawnResumeAt = resumeAt;
-  }
-
-  updateSpawnSuppressionState() {
-    if (this.spawnSuppressionStartedAt === null) {
-      return;
-    }
-
-    if (this.hasActiveBoss() || this.time.now < this.normalSpawnResumeAt) {
-      return;
-    }
-
-    this.totalSpawnSuppressedMs += this.time.now - this.spawnSuppressionStartedAt;
-    this.spawnSuppressionStartedAt = null;
-    this.normalSpawnResumeAt = 0;
-  }
-
-  isSpawnSuppressed() {
-    this.updateSpawnSuppressionState();
-    return this.spawnSuppressionStartedAt !== null;
-  }
-
-  getSpawnScalingElapsedTime() {
-    let suppressedMs = this.totalSpawnSuppressedMs;
-
-    if (this.spawnSuppressionStartedAt !== null) {
-      suppressedMs += this.time.now - this.spawnSuppressionStartedAt;
-    }
-
-    return Math.max(0, (this.time.now - this.survivalStartTime - suppressedMs) / 1000);
   }
 
   getDifficultyStageForTime(elapsedSeconds) {
@@ -802,6 +711,74 @@ export class MainScene extends Phaser.Scene {
     }
 
     return activeStage;
+  }
+
+  getScalingMultiplier(category, elapsedSeconds = this.getElapsedTime()) {
+    const curve = ENEMY_BALANCE.healthScaling[category] ?? ENEMY_BALANCE.healthScaling.normal;
+
+    if (!curve?.length) {
+      return 1;
+    }
+
+    if (elapsedSeconds <= curve[0].time) {
+      return curve[0].multiplier;
+    }
+
+    for (let index = 1; index < curve.length; index += 1) {
+      const previousPoint = curve[index - 1];
+      const nextPoint = curve[index];
+
+      if (elapsedSeconds <= nextPoint.time) {
+        const span = Math.max(1, nextPoint.time - previousPoint.time);
+        const progress = (elapsedSeconds - previousPoint.time) / span;
+        return Phaser.Math.Linear(previousPoint.multiplier, nextPoint.multiplier, progress);
+      }
+    }
+
+    return curve[curve.length - 1].multiplier;
+  }
+
+  buildScaledEnemyConfig(baseConfig) {
+    const multiplier = this.getScalingMultiplier(baseConfig.healthClass ?? 'normal');
+    return {
+      ...baseConfig,
+      maxHealth: Math.max(baseConfig.maxHealth, Math.round(baseConfig.maxHealth * multiplier))
+    };
+  }
+
+  buildScaledBossConfig(baseConfig) {
+    const multiplier = this.getScalingMultiplier('boss');
+    return {
+      ...baseConfig,
+      maxHealth: Math.max(baseConfig.maxHealth, Math.round(baseConfig.maxHealth * multiplier))
+    };
+  }
+
+  countActiveEnemiesByType(typeKey) {
+    let count = 0;
+    this.enemies.children.iterate((enemy) => {
+      if (enemy?.active && enemy.typeKey === typeKey) {
+        count += 1;
+      }
+    });
+    return count;
+  }
+
+  canSpawnEnemyType(typeKey) {
+    if (typeKey !== 'elite_ranger') {
+      return true;
+    }
+
+    const eliteConfig = ENEMY_BALANCE.eliteRanger;
+    if (this.getElapsedTime() < eliteConfig.unlockTime) {
+      return false;
+    }
+
+    if (this.currentBossPhase < eliteConfig.requireBossPhase) {
+      return false;
+    }
+
+    return this.countActiveEnemiesByType(typeKey) < eliteConfig.maxActive;
   }
 
   refreshSpawnTimer() {
@@ -893,24 +870,37 @@ export class MainScene extends Phaser.Scene {
     const y = this.player.y + Math.sin(angle) * spawnDistance;
 
     const enemyType = this.chooseEnemyType();
-    let enemy = this.enemies.getFirstDead(false);
 
-    if (enemy) {
-      enemy.spawn(x, y, enemyType);
+    if (!enemyType) {
       return;
     }
 
-    enemy = new Enemy(this, x, y, enemyType);
+    const enemyConfig = this.buildScaledEnemyConfig(enemyType);
+    let enemy = this.enemies.getFirstDead(false);
+
+    if (enemy) {
+      enemy.spawn(x, y, enemyConfig);
+      return;
+    }
+
+    enemy = new Enemy(this, x, y, enemyConfig);
     this.enemies.add(enemy);
   }
 
   chooseEnemyType() {
-    const { weights } = this.currentDifficultyStage;
-    const totalWeight = Object.values(weights).reduce((sum, value) => sum + value, 0);
+    const availableEntries = Object.entries(this.currentDifficultyStage.weights).filter(([typeKey, weight]) => {
+      return weight > 0 && this.canSpawnEnemyType(typeKey);
+    });
+
+    if (availableEntries.length === 0) {
+      return ENEMY_TYPES.normal;
+    }
+
+    const totalWeight = availableEntries.reduce((sum, [, weight]) => sum + weight, 0);
     const roll = Phaser.Math.Between(1, totalWeight);
     let runningTotal = 0;
 
-    for (const [typeKey, weight] of Object.entries(weights)) {
+    for (const [typeKey, weight] of availableEntries) {
       runningTotal += weight;
 
       if (roll <= runningTotal) {
@@ -918,7 +908,153 @@ export class MainScene extends Phaser.Scene {
       }
     }
 
-    return ENEMY_TYPES.normal;
+    return ENEMY_TYPES[availableEntries[0][0]] ?? ENEMY_TYPES.normal;
+  }
+
+  getBossSpawnPoint() {
+    const spawnDistance = Phaser.Math.Between(420, 520);
+    const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+
+    return {
+      x: this.player.x + Math.cos(angle) * spawnDistance,
+      y: this.player.y + Math.sin(angle) * spawnDistance
+    };
+  }
+
+  fireBossRandomBullets(boss) {
+    const nodeDistance = boss.bulletNodeDistance ?? 38;
+    const nodes = [
+      { x: -nodeDistance, y: 0 },
+      { x: nodeDistance, y: 0 },
+      { x: 0, y: -nodeDistance },
+      { x: 0, y: nodeDistance }
+    ];
+
+    nodes.forEach((node, nodeIndex) => {
+      for (let index = 0; index < boss.bulletCountPerNode; index += 1) {
+        const angle = Phaser.Math.FloatBetween(0, Math.PI * 2) + nodeIndex * 0.12;
+        this.spawnBossProjectile({
+          x: boss.x + node.x,
+          y: boss.y + node.y,
+          angle,
+          speed: boss.bulletSpeed,
+          lifeSpan: boss.bulletLifeSpan,
+          damage: boss.bulletDamage,
+          homingStrength: boss.bulletHomingStrength ?? 0,
+          target: this.player,
+          tint: 0xa6eeff,
+          scale: 1,
+          bodyRadius: 7
+        });
+      }
+    });
+  }
+
+  spawnBossProjectile(config) {
+    let projectile = this.bossProjectiles.getFirstDead(false);
+
+    if (!projectile) {
+      projectile = new BossProjectile(this, config.x, config.y);
+      this.bossProjectiles.add(projectile);
+    }
+
+    projectile.fire(config);
+  }
+
+  fireEliteProjectile(enemy, angle) {
+    if (!enemy?.active) {
+      return;
+    }
+
+    this.spawnBossProjectile({
+      x: enemy.x,
+      y: enemy.y,
+      angle,
+      speed: enemy.projectileSpeed,
+      lifeSpan: enemy.projectileLifeSpan,
+      damage: enemy.projectileDamage,
+      homingStrength: 0,
+      target: this.player,
+      tint: enemy.projectileTint,
+      scale: enemy.projectileScale,
+      bodyRadius: enemy.projectileBodyRadius
+    });
+  }
+  triggerBossShockwave(boss) {
+    this.createShockwaveEffect(boss.x, boss.y, boss.shockwaveRadius);
+
+    const dx = this.player.x - boss.x;
+    const dy = this.player.y - boss.y;
+    const distanceSq = dx * dx + dy * dy;
+
+    if (distanceSq <= boss.shockwaveRadius * boss.shockwaveRadius) {
+      const tookDamage = this.player.takeDamage(boss.shockwaveDamage, this.time.now);
+
+      if (tookDamage) {
+        this.handlePlayerDamageFeedback();
+        this.emitStats(true);
+
+        if (this.player.health <= 0) {
+          this.triggerGameOver();
+        }
+      }
+    }
+  }
+
+  createShockwaveEffect(x, y, radius) {
+    const pulse = this.add.circle(x, y, radius * 0.28, 0x9ae5ff, 0.34);
+    pulse.setDepth(4);
+
+    this.tweens.add({
+      targets: pulse,
+      alpha: 0,
+      scaleX: 1.95,
+      scaleY: 1.95,
+      duration: 260,
+      ease: 'Quad.Out',
+      onComplete: () => pulse.destroy()
+    });
+  }
+
+  getElapsedTime() {
+    return (this.time.now - this.survivalStartTime) / 1000;
+  }
+
+  beginSpawnSuppression(resumeAt = Number.POSITIVE_INFINITY) {
+    if (this.spawnSuppressionStartedAt === null) {
+      this.spawnSuppressionStartedAt = this.time.now;
+    }
+
+    this.normalSpawnResumeAt = resumeAt;
+  }
+
+  updateSpawnSuppressionState() {
+    if (this.spawnSuppressionStartedAt === null) {
+      return;
+    }
+
+    if (this.hasActiveBoss() || this.time.now < this.normalSpawnResumeAt) {
+      return;
+    }
+
+    this.totalSpawnSuppressedMs += this.time.now - this.spawnSuppressionStartedAt;
+    this.spawnSuppressionStartedAt = null;
+    this.normalSpawnResumeAt = 0;
+  }
+
+  isSpawnSuppressed() {
+    this.updateSpawnSuppressionState();
+    return this.spawnSuppressionStartedAt !== null;
+  }
+
+  getSpawnScalingElapsedTime() {
+    let suppressedMs = this.totalSpawnSuppressedMs;
+
+    if (this.spawnSuppressionStartedAt !== null) {
+      suppressedMs += this.time.now - this.spawnSuppressionStartedAt;
+    }
+
+    return Math.max(0, (this.time.now - this.survivalStartTime - suppressedMs) / 1000);
   }
 
   syncWeaponSystems() {
@@ -2139,5 +2275,17 @@ export class MainScene extends Phaser.Scene {
     });
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 

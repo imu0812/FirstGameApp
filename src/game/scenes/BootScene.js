@@ -34,9 +34,34 @@ export class BootScene extends Phaser.Scene {
     graphics.generateTexture('enemy', 28, 28);
 
     graphics.clear();
+    graphics.fillStyle(0xff9d5c, 1);
+    graphics.fillCircle(16, 16, 14);
+    graphics.lineStyle(3, 0xfff0c8, 0.85);
+    graphics.strokeCircle(16, 16, 14);
+    graphics.lineStyle(2, 0x6a2d0e, 0.9);
+    graphics.strokeLineShape(new Phaser.Geom.Line(9, 23, 23, 9));
+    graphics.generateTexture('elite_ranger', 32, 32);
+
+    graphics.clear();
+    graphics.fillStyle(0x78d6ff, 1);
+    graphics.fillCircle(22, 22, 20);
+    graphics.lineStyle(4, 0xeafaff, 0.85);
+    graphics.strokeCircle(22, 22, 20);
+    graphics.fillStyle(0x15374c, 0.35);
+    graphics.fillCircle(16, 16, 6);
+    graphics.generateTexture('boss', 44, 44);
+
+    graphics.clear();
     graphics.fillStyle(0xffe38b, 1);
     graphics.fillRect(0, 0, 18, 6);
     graphics.generateTexture('bullet', 18, 6);
+
+    graphics.clear();
+    graphics.fillStyle(0x9ae5ff, 1);
+    graphics.fillCircle(7, 7, 7);
+    graphics.lineStyle(2, 0xeefbff, 0.9);
+    graphics.strokeCircle(7, 7, 7);
+    graphics.generateTexture('boss_bullet', 14, 14);
 
     graphics.clear();
     graphics.fillStyle(0x75f2b7, 1);
