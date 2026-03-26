@@ -64,6 +64,8 @@ export class MainScene extends Phaser.Scene {
     this.totalSpawnSuppressedMs = 0;
     this.normalSpawnResumeAt = 0;
     this.lastChestReward = null;
+    this.totalPausedMs = 0;
+    this.pauseStartedAt = null;
 
 
     this.createArena();
@@ -266,9 +268,10 @@ export class MainScene extends Phaser.Scene {
     }
 
     this.isPaused = nextState;
-    this.time.timeScale = this.isPaused ? 0 : 1;
 
     if (this.isPaused) {
+      this.pauseStartedAt = this.time.now;
+      this.time.timeScale = 0;
       this.physics.world.pause();
       this.player.setVelocity(0, 0);
       this.enemies.children.iterate((enemy) => {
@@ -276,7 +279,17 @@ export class MainScene extends Phaser.Scene {
           enemy.setVelocity(0, 0);
         }
       });
+      this.bosses.children.iterate((boss) => {
+        if (boss?.active) {
+          boss.setVelocity(0, 0);
+        }
+      });
     } else {
+      if (this.pauseStartedAt !== null) {
+        this.totalPausedMs += this.time.now - this.pauseStartedAt;
+        this.pauseStartedAt = null;
+      }
+      this.time.timeScale = 1;
       this.physics.world.resume();
     }
 
@@ -740,17 +753,31 @@ export class MainScene extends Phaser.Scene {
 
   buildScaledEnemyConfig(baseConfig) {
     const multiplier = this.getScalingMultiplier(baseConfig.healthClass ?? 'normal');
+    const tuning = ENEMY_BALANCE.strengthMultipliers[baseConfig.key] ?? {};
     return {
       ...baseConfig,
-      maxHealth: Math.max(baseConfig.maxHealth, Math.round(baseConfig.maxHealth * multiplier))
+      maxHealth: Math.max(baseConfig.maxHealth, Math.round(baseConfig.maxHealth * multiplier * (tuning.health ?? 1))),
+      speed: Math.round(baseConfig.speed * (tuning.speed ?? 1)),
+      projectileCooldown: baseConfig.projectileCooldown
+        ? Math.max(650, Math.round(baseConfig.projectileCooldown * (tuning.projectileCooldown ?? 1)))
+        : baseConfig.projectileCooldown
     };
   }
 
   buildScaledBossConfig(baseConfig) {
     const multiplier = this.getScalingMultiplier('boss');
+    const phaseTuning = ENEMY_BALANCE.strengthMultipliers.bossPhase?.[baseConfig.phase] ?? {};
+    const displayWidth = 44 * (baseConfig.scale ?? 1);
     return {
       ...baseConfig,
-      maxHealth: Math.max(baseConfig.maxHealth, Math.round(baseConfig.maxHealth * multiplier))
+      maxHealth: Math.max(baseConfig.maxHealth, Math.round(baseConfig.maxHealth * multiplier * (phaseTuning.health ?? 1))),
+      spawnProtectionMs: phaseTuning.spawnProtectionMs ?? baseConfig.spawnProtectionMs,
+      damageTakenMultiplier: phaseTuning.damageTakenMultiplier ?? baseConfig.damageTakenMultiplier ?? 1,
+      initialDashDelay: phaseTuning.initialDashDelay ?? baseConfig.initialDashDelay,
+      initialBurstDelay: phaseTuning.initialBurstDelay ?? baseConfig.initialBurstDelay,
+      shockwaveRadius: baseConfig.phase >= 3
+        ? Math.max(baseConfig.shockwaveRadius ?? 0, Math.round(displayWidth * 0.75))
+        : (baseConfig.shockwaveRadius ?? Math.round(displayWidth * 0.75))
     };
   }
 
@@ -981,13 +1008,18 @@ export class MainScene extends Phaser.Scene {
     });
   }
   triggerBossShockwave(boss) {
-    this.createShockwaveEffect(boss.x, boss.y, boss.shockwaveRadius);
+    const shockwaveRadius = boss.shockwaveRadius ?? Math.round((boss.displayWidth ?? 0) * 0.75);
+    this.createShockwaveEffect(boss.x, boss.y, shockwaveRadius);
 
-    const dx = this.player.x - boss.x;
-    const dy = this.player.y - boss.y;
+    const playerCenterX = this.player.body?.center.x ?? this.player.x;
+    const playerCenterY = this.player.body?.center.y ?? this.player.y;
+    const dx = playerCenterX - boss.x;
+    const dy = playerCenterY - boss.y;
     const distanceSq = dx * dx + dy * dy;
+    const playerRadius = this.player.body?.halfWidth ?? 0;
+    const damageRadius = shockwaveRadius + playerRadius;
 
-    if (distanceSq <= boss.shockwaveRadius * boss.shockwaveRadius) {
+    if (distanceSq <= damageRadius * damageRadius) {
       const tookDamage = this.player.takeDamage(boss.shockwaveDamage, this.time.now);
 
       if (tookDamage) {
@@ -1002,27 +1034,47 @@ export class MainScene extends Phaser.Scene {
   }
 
   createShockwaveEffect(x, y, radius) {
-    const pulse = this.add.circle(x, y, radius * 0.28, 0x9ae5ff, 0.34);
+    const pulse = this.add.circle(x, y, radius * 0.34, 0x9ae5ff, 0.28);
+    const ring = this.add.circle(x, y, radius * 0.2, 0x000000, 0);
     pulse.setDepth(4);
+    ring.setDepth(5).setStrokeStyle(3, 0xdff7ff, 0.85);
 
     this.tweens.add({
-      targets: pulse,
+      targets: [pulse, ring],
       alpha: 0,
       scaleX: 1.95,
       scaleY: 1.95,
-      duration: 260,
+      duration: 280,
       ease: 'Quad.Out',
-      onComplete: () => pulse.destroy()
+      onComplete: () => {
+        pulse.destroy();
+        ring.destroy();
+      }
     });
+
+    if (this.debugHitboxesEnabled) {
+      const debugRing = this.add.circle(x, y, radius, 0x000000, 0).setDepth(5).setStrokeStyle(1, 0x7ef9ff, 0.55);
+      this.tweens.add({
+        targets: debugRing,
+        alpha: 0,
+        duration: 320,
+        onComplete: () => debugRing.destroy()
+      });
+    }
+  }
+
+  getProgressTimeMs() {
+    const pausedMs = this.totalPausedMs + (this.isPaused && this.pauseStartedAt !== null ? this.time.now - this.pauseStartedAt : 0);
+    return Math.max(0, this.time.now - this.survivalStartTime - pausedMs);
   }
 
   getElapsedTime() {
-    return (this.time.now - this.survivalStartTime) / 1000;
+    return this.getProgressTimeMs() / 1000;
   }
 
   beginSpawnSuppression(resumeAt = Number.POSITIVE_INFINITY) {
     if (this.spawnSuppressionStartedAt === null) {
-      this.spawnSuppressionStartedAt = this.time.now;
+      this.spawnSuppressionStartedAt = this.getProgressTimeMs();
     }
 
     this.normalSpawnResumeAt = resumeAt;
@@ -1033,11 +1085,12 @@ export class MainScene extends Phaser.Scene {
       return;
     }
 
-    if (this.hasActiveBoss() || this.time.now < this.normalSpawnResumeAt) {
+    const progressTime = this.getProgressTimeMs();
+    if (this.hasActiveBoss() || progressTime < this.normalSpawnResumeAt) {
       return;
     }
 
-    this.totalSpawnSuppressedMs += this.time.now - this.spawnSuppressionStartedAt;
+    this.totalSpawnSuppressedMs += progressTime - this.spawnSuppressionStartedAt;
     this.spawnSuppressionStartedAt = null;
     this.normalSpawnResumeAt = 0;
   }
@@ -1049,12 +1102,13 @@ export class MainScene extends Phaser.Scene {
 
   getSpawnScalingElapsedTime() {
     let suppressedMs = this.totalSpawnSuppressedMs;
+    const progressTime = this.getProgressTimeMs();
 
     if (this.spawnSuppressionStartedAt !== null) {
-      suppressedMs += this.time.now - this.spawnSuppressionStartedAt;
+      suppressedMs += progressTime - this.spawnSuppressionStartedAt;
     }
 
-    return Math.max(0, (this.time.now - this.survivalStartTime - suppressedMs) / 1000);
+    return Math.max(0, (progressTime - suppressedMs) / 1000);
   }
 
   syncWeaponSystems() {
@@ -1601,7 +1655,7 @@ export class MainScene extends Phaser.Scene {
       return;
     }
 
-    this.normalSpawnResumeAt = this.time.now + this.bossSpawnGraceDuration;
+    this.normalSpawnResumeAt = this.getProgressTimeMs() + this.bossSpawnGraceDuration;
     this.emitStats(true);
   }
 
@@ -2275,6 +2329,9 @@ export class MainScene extends Phaser.Scene {
     });
   }
 }
+
+
+
 
 
 

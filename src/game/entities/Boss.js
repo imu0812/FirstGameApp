@@ -41,6 +41,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     this.bulletNodeDistance = config.bulletNodeDistance ?? 38;
     this.hitboxRadiusFactor = config.hitboxRadiusFactor ?? 0.28;
     this.spawnProtectionMs = config.spawnProtectionMs ?? 0;
+    this.damageTakenMultiplier = config.damageTakenMultiplier ?? 1;
     this.dashAngle = 0;
     this.dashChargeEndAt = 0;
     this.dashEndAt = 0;
@@ -59,6 +60,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     this.setTint(this.baseTint);
     this.setScale(config.scale ?? 1);
     this.updateHitbox();
+    this.shockwaveRadius = config.shockwaveRadius ?? Math.round(this.displayWidth * 0.75);
 
     return this;
   }
@@ -164,7 +166,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
       return false;
     }
 
-    this.health -= amount;
+    this.health -= amount * this.damageTakenMultiplier;
     return this.health <= 0;
   }
 
@@ -179,9 +181,12 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     this.dashChargeEndAt = 0;
     this.dashEndAt = 0;
     this.invulnerableUntil = 0;
+    this.damageTakenMultiplier = 1;
     this.disableBody(true, true);
     this.setVelocity(0, 0);
     this.setTint(this.baseTint ?? 0xffffff);
     this.setAlpha(1);
   }
 }
+
+
