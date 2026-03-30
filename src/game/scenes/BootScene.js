@@ -1,4 +1,6 @@
-﻿import Phaser from 'phaser';
+import Phaser from 'phaser';
+import arcBoltIconImage from '../../assets/arc_bolt.png';
+import arcBoltProjectileImage from '../../assets/arc_bolt_projectile_16x32.png';
 import rewardMagnetImage from '../../assets/reward_magnet.png';
 
 export class BootScene extends Phaser.Scene {
@@ -7,13 +9,30 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload() {
+    this.load.image('arc_bolt_icon', arcBoltIconImage);
+    this.load.image('arc_bolt_projectile_source', arcBoltProjectileImage);
     this.load.image('reward_magnet', rewardMagnetImage);
   }
 
   create() {
+    this.createArcBoltProjectileTexture();
     this.createTextures();
     this.scene.start('MainScene');
     this.scene.launch('UIScene');
+  }
+
+  createArcBoltProjectileTexture() {
+    const sourceImage = this.textures.get('arc_bolt_projectile_source').getSourceImage();
+    const canvasTexture = this.textures.createCanvas('arc_bolt_projectile', 32, 32);
+    const context = canvasTexture.getContext();
+
+    context.clearRect(0, 0, 32, 32);
+    context.save();
+    context.translate(16, 16);
+    context.rotate(Math.PI / 2);
+    context.drawImage(sourceImage, -sourceImage.width / 2, -sourceImage.height / 2);
+    context.restore();
+    canvasTexture.refresh();
   }
 
   createTextures() {
@@ -202,3 +221,4 @@ export class BootScene extends Phaser.Scene {
     graphics.generateTexture(key, 36, 36);
   }
 }
+

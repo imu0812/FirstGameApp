@@ -1,4 +1,4 @@
-﻿import Phaser from 'phaser';
+import Phaser from 'phaser';
 
 export class UIScene extends Phaser.Scene {
   constructor() {
@@ -354,6 +354,8 @@ export class UIScene extends Phaser.Scene {
     container.setScrollFactor(0).setVisible(false);
 
     const background = this.add.rectangle(0, 0, 280, 82, 0x102839, 1).setStrokeStyle(2, 0x6dd3ff, 0.38).setInteractive({ useHandCursor: true });
+    const iconFrame = this.add.rectangle(-105, 0, 52, 52, 0x0c2130, 0.96).setStrokeStyle(2, 0x6dd3ff, 0.28).setVisible(false);
+    const icon = this.add.image(-105, 0, 'arc_bolt_icon').setVisible(false);
     const title = this.add.text(-126, -22, '', {
       fontFamily: 'Trebuchet MS',
       fontSize: '18px',
@@ -378,8 +380,8 @@ export class UIScene extends Phaser.Scene {
       mainScene.applyUpgrade(background.upgradeId);
     });
 
-    container.add([background, title, description]);
-    return { container, background, title, description };
+    container.add([background, iconFrame, icon, title, description]);
+    return { container, background, iconFrame, icon, title, description };
   }
 
   createBossWarning() {
@@ -456,6 +458,21 @@ export class UIScene extends Phaser.Scene {
       button.background.upgradeId = choice.id;
       button.title.setText(choice.title);
       button.description.setText(choice.description);
+      if (choice.iconKey && this.textures.exists(choice.iconKey)) {
+        button.icon.setTexture(choice.iconKey);
+        button.icon.setDisplaySize(42, 42);
+        button.icon.setVisible(true);
+        button.iconFrame.setVisible(true);
+        button.title.setPosition(-72, -22);
+        button.description.setPosition(-72, 10);
+        button.description.setWordWrapWidth(166);
+      } else {
+        button.icon.setVisible(false);
+        button.iconFrame.setVisible(false);
+        button.title.setPosition(-126, -22);
+        button.description.setPosition(-126, 10);
+        button.description.setWordWrapWidth(220);
+      }
       button.container.setVisible(true);
     });
   }
@@ -467,6 +484,8 @@ export class UIScene extends Phaser.Scene {
 
     this.optionButtons.forEach((button) => {
       button.background.upgradeId = null;
+      button.icon.setVisible(false);
+      button.iconFrame.setVisible(false);
       button.container.setVisible(false);
     });
   }
@@ -510,3 +529,5 @@ export class UIScene extends Phaser.Scene {
     this.restartButton.setVisible(false);
   }
 }
+
+

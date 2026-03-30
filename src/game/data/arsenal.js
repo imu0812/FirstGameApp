@@ -1,11 +1,13 @@
 export const WEAPON_DEFS = {
-  arc_bolt: {
+  arc_bolt: {arc_bolt_projectile_16x32.png
     key: 'arc_bolt',
+    iconKey: 'arc_bolt_icon',
+    projectileKey: 'arc_bolt_projectile',
     name: '奧術飛矢',
     category: 'weapon',
     type: 'auto',
     maxLevel: 5,
-    unlockDescription: '自動鎖定最近敵人。',
+    unlockDescription: '發射會追向最近目標的奧術飛矢。',
     levels: [
       { range: 300, damage: 2, cooldown: 680, projectiles: 1, speed: 430, lifeSpan: 920, spread: 0.08, pierce: 0, tint: 0xffe38b, scale: 1 },
       { range: 315, damage: 3, cooldown: 590, projectiles: 1, speed: 450, lifeSpan: 960, spread: 0.08, pierce: 0, tint: 0xffe38b, scale: 1 },
@@ -20,7 +22,7 @@ export const WEAPON_DEFS = {
     category: 'weapon',
     type: 'orbit',
     maxLevel: 5,
-    unlockDescription: '飛刃環繞，持續切割周圍敵人。',
+    unlockDescription: '召喚環繞角色旋轉的飛盤持續切割敵人。',
     levels: [
       { damage: 2, count: 1, radius: 58, orbitSpeed: 1.7, hitCooldown: 320, tint: 0x7ef9ff, scale: 0.95 },
       { damage: 2, count: 2, radius: 60, orbitSpeed: 1.85, hitCooldown: 300, tint: 0x7ef9ff, scale: 0.98 },
@@ -35,7 +37,7 @@ export const WEAPON_DEFS = {
     category: 'weapon',
     type: 'pierce',
     maxLevel: 5,
-    unlockDescription: '寒霜箭命中附帶緩速。',
+    unlockDescription: '射出可穿透敵人的冰槍並附帶緩速。',
     levels: [
       { range: 360, damage: 2, cooldown: 1380, projectiles: 1, speed: 520, lifeSpan: 1160, spread: 0.03, pierce: 1, slowMultiplier: 0.7, slowDuration: 1400, freezeDuration: 0, tint: 0x8ddfff, scale: 1.02 },
       { range: 380, damage: 3, cooldown: 1260, projectiles: 1, speed: 540, lifeSpan: 1200, spread: 0.03, pierce: 1, slowMultiplier: 0.62, slowDuration: 1600, freezeDuration: 0, tint: 0x97e8ff, scale: 1.04 },
@@ -50,7 +52,7 @@ export const WEAPON_DEFS = {
     category: 'weapon',
     type: 'explosive',
     maxLevel: 5,
-    unlockDescription: '發射種子，命中後爆炸。',
+    unlockDescription: '拋出會爆炸的種子，造成範圍傷害。',
     levels: [
       { range: 300, damage: 3, cooldown: 2100, projectiles: 1, speed: 265, lifeSpan: 1100, spread: 0.04, radius: 60, tint: 0xff9e7a, scale: 0.95 },
       { range: 320, damage: 4, cooldown: 1920, projectiles: 1, speed: 275, lifeSpan: 1140, spread: 0.05, radius: 70, tint: 0xff9e7a, scale: 1 },
@@ -64,10 +66,10 @@ export const WEAPON_DEFS = {
 export const PASSIVE_DEFS = {
   attack_frequency: {
     key: 'attack_frequency',
-    name: '脈衝線圈',
+    name: '攻速提升',
     category: 'passive',
     maxLevel: 5,
-    unlockDescription: '提升攻擊節奏。',
+    unlockDescription: '降低所有武器的攻擊間隔。',
     levels: [
       { fireRateMultiplier: 0.9 },
       { fireRateMultiplier: 0.82 },
@@ -78,10 +80,10 @@ export const PASSIVE_DEFS = {
   },
   damage_boost: {
     key: 'damage_boost',
-    name: '核心餘燼',
+    name: '傷害強化',
     category: 'passive',
     maxLevel: 5,
-    unlockDescription: '提升全武器傷害。',
+    unlockDescription: '提高所有攻擊造成的傷害。',
     levels: [
       { damageMultiplier: 1.2 },
       { damageMultiplier: 1.38 },
@@ -92,11 +94,11 @@ export const PASSIVE_DEFS = {
   },
   projectile_count: {
     key: 'projectile_count',
-    name: '分光稜鏡',
+    name: '投射增幅',
     category: 'passive',
     stackMode: 'cumulative',
     maxLevel: 5,
-    unlockDescription: '強化投射物數量與節奏。',
+    unlockDescription: '增加額外投射物與彈道強化效果。',
     levels: [
       { projectileBonus: 1 },
       { cooldownMultiplier: 0.92 },
@@ -107,10 +109,10 @@ export const PASSIVE_DEFS = {
   },
   move_speed: {
     key: 'move_speed',
-    name: '疾行之靴',
+    name: '移動速度',
     category: 'passive',
     maxLevel: 5,
-    unlockDescription: '提升移動速度。',
+    unlockDescription: '提升角色的移動靈活度。',
     levels: [
       { moveSpeedBonus: 20 },
       { moveSpeedBonus: 40 },
@@ -121,10 +123,10 @@ export const PASSIVE_DEFS = {
   },
   pickup_radius: {
     key: 'pickup_radius',
-    name: '磁引花簇',
+    name: '拾取範圍',
     category: 'passive',
     maxLevel: 5,
-    unlockDescription: '提升寶石吸附範圍。',
+    unlockDescription: '擴大經驗與掉落物的吸附距離。',
     levels: [
       { pickupRadiusBonus: 40 },
       { pickupRadiusBonus: 80 },
@@ -135,10 +137,10 @@ export const PASSIVE_DEFS = {
   },
   max_health: {
     key: 'max_health',
-    name: '生命甲殼',
+    name: '最大生命',
     category: 'passive',
     maxLevel: 5,
-    unlockDescription: '提升生命上限並回復。',
+    unlockDescription: '提高生命上限並立即回復部分生命。',
     levels: [
       { maxHealthBonus: 1, healOnGain: 1 },
       { maxHealthBonus: 2, healOnGain: 1 },

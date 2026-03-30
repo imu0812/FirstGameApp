@@ -1,4 +1,4 @@
-﻿import Phaser from 'phaser';
+import Phaser from 'phaser';
 import { Player } from '../entities/Player.js';
 import { Enemy } from '../entities/Enemy.js';
 import { Boss } from '../entities/Boss.js';
@@ -1233,6 +1233,7 @@ export class MainScene extends Phaser.Scene {
 
   fireArcBolt() {
     const stats = this.getWeaponStats('arc_bolt');
+    const definition = WEAPON_DEFS.arc_bolt;
     const target = this.findNearestEnemy(stats.range);
 
     if (!target) {
@@ -1241,8 +1242,9 @@ export class MainScene extends Phaser.Scene {
     const baseAngle = Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y);
     this.spawnProjectileSpread({
       ...stats,
-      texture: 'bullet',
-      bodyRadius: 6
+      texture: definition.projectileKey ?? 'bullet',
+      bodyRadius: 6,
+      rotationOffset: 0
     }, baseAngle);
   }
 
@@ -2136,7 +2138,8 @@ export class MainScene extends Phaser.Scene {
       choices: this.currentUpgradeChoices.map((choice) => ({
         id: choice.id,
         title: choice.title,
-        description: choice.description
+        description: choice.description,
+        iconKey: choice.iconKey ?? null
       }))
     });
 
@@ -2163,7 +2166,8 @@ export class MainScene extends Phaser.Scene {
           key: weaponKey,
           nextLevel: 1,
           title: `新武器：${def.name}`,
-          description: this.describeWeaponLevel(weaponKey, 1, true)
+          description: this.describeWeaponLevel(weaponKey, 1, true),
+          iconKey: def.iconKey ?? null
         });
         return;
       }
@@ -2175,7 +2179,8 @@ export class MainScene extends Phaser.Scene {
           key: weaponKey,
           nextLevel: currentLevel + 1,
           title: `${def.name} 等級 ${currentLevel + 1}`,
-          description: this.describeWeaponLevel(weaponKey, currentLevel + 1, false)
+          description: this.describeWeaponLevel(weaponKey, currentLevel + 1, false),
+          iconKey: def.iconKey ?? null
         });
       }
     });

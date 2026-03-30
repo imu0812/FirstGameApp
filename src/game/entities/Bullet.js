@@ -1,4 +1,4 @@
-﻿import Phaser from 'phaser';
+import Phaser from 'phaser';
 
 export class Bullet extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {
@@ -41,9 +41,15 @@ export class Bullet extends Phaser.Physics.Arcade.Sprite {
 
     this.setTint(config.tint ?? 0xffffff);
     this.setScale(config.scale ?? 1);
-    this.body.setCircle(config.bodyRadius ?? 8);
+    const bodyRadius = config.bodyRadius ?? 8;
+    const bodyDiameter = bodyRadius * 2;
+    this.body.setCircle(
+      bodyRadius,
+      Math.max(0, (this.width - bodyDiameter) / 2),
+      Math.max(0, (this.height - bodyDiameter) / 2)
+    );
 
-    this.rotation = config.angle;
+    this.rotation = config.angle + (config.rotationOffset ?? 0);
     this.scene.physics.velocityFromRotation(config.angle, this.speed, this.body.velocity);
     this.spawnTime = this.scene.time.now;
   }
@@ -89,3 +95,5 @@ export class Bullet extends Phaser.Physics.Arcade.Sprite {
     this.disableBody(true, true);
   }
 }
+
+
