@@ -956,23 +956,63 @@ export class MainScene extends Phaser.Scene {
       { x: 0, y: -nodeDistance },
       { x: 0, y: nodeDistance }
     ];
+    const maxActiveBullets = boss.maxActiveBullets ?? Number.POSITIVE_INFINITY;
+    const activeBullets = this.bossProjectiles.countActive(true);
 
-    nodes.forEach((node, nodeIndex) => {
-      for (let index = 0; index < boss.bulletCountPerNode; index += 1) {
-        const angle = Phaser.Math.FloatBetween(0, Math.PI * 2) + nodeIndex * 0.12;
+    if (activeBullets >= maxActiveBullets) {
+      return;
+    }
+
+    const volleyCap = Math.min(
+      boss.bulletVolleyCap ?? Number.POSITIVE_INFINITY,
+      maxActiveBullets - activeBullets
+    );
+
+    if (volleyCap <= 0) {
+      return;
+    }
+
+    let bulletsSpawned = 0;
+    const orderedNodes = Phaser.Utils.Array.Shuffle(nodes.slice());
+
+    orderedNodes.forEach((node) => {
+      const remaining = volleyCap - bulletsSpawned;
+
+      if (remaining <= 0) {
+        return;
+      }
+
+      const bulletsFromNode = Math.min(boss.bulletCountPerNode, remaining);
+      const originX = boss.x + node.x;
+      const originY = boss.y + node.y;
+      const baseAngle = (boss.bulletHomingTurnRate ?? boss.bulletHomingStrength ?? 0) > 0
+        ? Phaser.Math.Angle.Between(originX, originY, this.player.x, this.player.y)
+        : Phaser.Math.FloatBetween(0, Math.PI * 2);
+
+      for (let index = 0; index < bulletsFromNode; index += 1) {
+        const spreadOffset = bulletsFromNode === 1
+          ? 0
+          : (index - (bulletsFromNode - 1) / 2) * 0.2;
+        const angle = baseAngle + spreadOffset + Phaser.Math.FloatBetween(-0.04, 0.04);
+
         this.spawnBossProjectile({
-          x: boss.x + node.x,
-          y: boss.y + node.y,
+          x: originX,
+          y: originY,
           angle,
           speed: boss.bulletSpeed,
           lifeSpan: boss.bulletLifeSpan,
           damage: boss.bulletDamage,
           homingStrength: boss.bulletHomingStrength ?? 0,
+          homingTurnRate: boss.bulletHomingTurnRate ?? boss.bulletHomingStrength ?? 0,
+          homingDelayMs: boss.bulletHomingDelayMs ?? 0,
+          homingDurationMs: boss.bulletHomingDurationMs ?? boss.bulletLifeSpan,
           target: this.player,
           tint: 0xa6eeff,
           scale: 1,
           bodyRadius: 7
         });
+
+        bulletsSpawned += 1;
       }
     });
   }
@@ -1007,6 +1047,38 @@ export class MainScene extends Phaser.Scene {
       bodyRadius: enemy.projectileBodyRadius
     });
   }
+  createShockwaveChargeEffect(x, y, radius, duration = 600) {
+    const visibleRadius = Math.max(1, radius);
+    const telegraph = this.add.circle(x, y, visibleRadius, 0x000000, 0);
+    const pulse = this.add.circle(x, y, Math.max(18, visibleRadius * 0.16), 0x9ae5ff, 0.2);
+    telegraph.setDepth(4).setStrokeStyle(4, 0x9ae5ff, 0.26);
+    pulse.setDepth(4);
+    telegraph.setScale(0.15);
+    pulse.setScale(0.45);
+
+    this.tweens.add({
+      targets: telegraph,
+      scaleX: 1,
+      scaleY: 1,
+      alpha: 1,
+      duration,
+      ease: 'Cubic.Out'
+    });
+
+    this.tweens.add({
+      targets: pulse,
+      scaleX: 1.75,
+      scaleY: 1.75,
+      alpha: 0.06,
+      duration,
+      ease: 'Sine.Out',
+      onComplete: () => {
+        pulse.destroy();
+        telegraph.destroy();
+      }
+    });
+  }
+
   triggerBossShockwave(boss) {
     const shockwaveRadius = boss.shockwaveRadius ?? Math.round((boss.displayWidth ?? 0) * 0.75);
     this.createShockwaveEffect(boss.x, boss.y, shockwaveRadius);
@@ -1034,16 +1106,19 @@ export class MainScene extends Phaser.Scene {
   }
 
   createShockwaveEffect(x, y, radius) {
-    const pulse = this.add.circle(x, y, radius * 0.34, 0x9ae5ff, 0.28);
-    const ring = this.add.circle(x, y, radius * 0.2, 0x000000, 0);
+    const visibleRadius = Math.max(1, radius);
+    const startRadius = Math.max(14, visibleRadius * 0.22);
+    const endScale = visibleRadius / startRadius;
+    const pulse = this.add.circle(x, y, startRadius, 0x9ae5ff, 0.28);
+    const ring = this.add.circle(x, y, startRadius, 0x000000, 0);
     pulse.setDepth(4);
     ring.setDepth(5).setStrokeStyle(3, 0xdff7ff, 0.85);
 
     this.tweens.add({
       targets: [pulse, ring],
       alpha: 0,
-      scaleX: 1.95,
-      scaleY: 1.95,
+      scaleX: endScale,
+      scaleY: endScale,
       duration: 280,
       ease: 'Quad.Out',
       onComplete: () => {

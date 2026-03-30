@@ -12,6 +12,11 @@ export class BossProjectile extends Phaser.Physics.Arcade.Sprite {
     this.spawnTime = 0;
     this.speed = 0;
     this.homingStrength = 0;
+    this.homingTurnRate = 0;
+    this.homingDelayMs = 0;
+    this.homingDurationMs = 0;
+    this.homingStartsAt = 0;
+    this.homingEndsAt = 0;
     this.target = null;
 
     this.setActive(false);
@@ -34,8 +39,13 @@ export class BossProjectile extends Phaser.Physics.Arcade.Sprite {
     this.lifeSpan = config.lifeSpan ?? 2400;
     this.speed = config.speed ?? 220;
     this.homingStrength = config.homingStrength ?? 0;
+    this.homingTurnRate = config.homingTurnRate ?? this.homingStrength;
+    this.homingDelayMs = config.homingDelayMs ?? 0;
+    this.homingDurationMs = config.homingDurationMs ?? this.lifeSpan;
     this.target = config.target ?? null;
     this.spawnTime = this.scene.time.now;
+    this.homingStartsAt = this.spawnTime + this.homingDelayMs;
+    this.homingEndsAt = this.homingStartsAt + this.homingDurationMs;
     this.rotation = config.angle;
     this.scene.physics.velocityFromRotation(config.angle, this.speed, this.body.velocity);
   }
@@ -47,10 +57,16 @@ export class BossProjectile extends Phaser.Physics.Arcade.Sprite {
       return;
     }
 
-    if (this.homingStrength > 0 && this.target?.active) {
+    if (
+      this.homingTurnRate > 0
+      && this.target?.active
+      && time >= this.homingStartsAt
+      && time <= this.homingEndsAt
+    ) {
       const desiredAngle = Phaser.Math.Angle.Between(this.x, this.y, this.target.x, this.target.y);
-      const currentAngle = this.body.velocity.angle();
-      const nextAngle = Phaser.Math.Angle.RotateTo(currentAngle, desiredAngle, this.homingStrength);
+      const currentAngle = this.body.velocity.lengthSq() > 0 ? this.body.velocity.angle() : this.rotation;
+      const maxTurnStep = this.homingTurnRate * (delta / 1000);
+      const nextAngle = Phaser.Math.Angle.RotateTo(currentAngle, desiredAngle, maxTurnStep);
       this.rotation = nextAngle;
       this.scene.physics.velocityFromRotation(nextAngle, this.speed, this.body.velocity);
     }
@@ -63,6 +79,11 @@ export class BossProjectile extends Phaser.Physics.Arcade.Sprite {
   disableProjectile() {
     this.target = null;
     this.homingStrength = 0;
+    this.homingTurnRate = 0;
+    this.homingDelayMs = 0;
+    this.homingDurationMs = 0;
+    this.homingStartsAt = 0;
+    this.homingEndsAt = 0;
     this.speed = 0;
     this.setVelocity(0, 0);
     this.disableBody(true, true);

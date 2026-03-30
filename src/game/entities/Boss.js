@@ -15,7 +15,9 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
 
   spawn(x, y, config) {
     this.shockwaveTimer?.remove(false);
+    this.shockwaveTelegraphTimer?.remove(false);
     this.shockwaveTimer = null;
+    this.shockwaveTelegraphTimer = null;
 
     this.phase = config.phase ?? 1;
     this.name = config.name;
@@ -32,12 +34,18 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     this.shockwaveDelay = config.shockwaveDelay;
     this.shockwaveRadius = config.shockwaveRadius;
     this.shockwaveDamage = config.shockwaveDamage;
+    this.shockwaveChargeDuration = config.shockwaveChargeDuration ?? this.shockwaveDelay;
     this.bulletBurstCooldown = config.bulletBurstCooldown;
     this.bulletSpeed = config.bulletSpeed;
     this.bulletLifeSpan = config.bulletLifeSpan;
     this.bulletDamage = config.bulletDamage;
     this.bulletCountPerNode = config.bulletCountPerNode;
     this.bulletHomingStrength = config.bulletHomingStrength ?? 0;
+    this.bulletHomingTurnRate = config.bulletHomingTurnRate ?? this.bulletHomingStrength;
+    this.bulletHomingDelayMs = config.bulletHomingDelayMs ?? 0;
+    this.bulletHomingDurationMs = config.bulletHomingDurationMs ?? this.bulletLifeSpan;
+    this.bulletVolleyCap = config.bulletVolleyCap ?? Number.POSITIVE_INFINITY;
+    this.maxActiveBullets = config.maxActiveBullets ?? Number.POSITIVE_INFINITY;
     this.bulletNodeDistance = config.bulletNodeDistance ?? 38;
     this.hitboxRadiusFactor = config.hitboxRadiusFactor ?? 0.28;
     this.spawnProtectionMs = config.spawnProtectionMs ?? 0;
@@ -136,7 +144,18 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     this.dashEndAt = time + this.dashDuration;
     this.nextDashAt = time + this.dashCooldown;
     this.nextBurstAt = Math.max(this.nextBurstAt, this.dashEndAt + this.shockwaveDelay + 900);
+    this.shockwaveTelegraphTimer?.remove(false);
     this.shockwaveTimer?.remove(false);
+    this.shockwaveTelegraphTimer = this.scene.time.delayedCall(
+      this.dashDuration,
+      () => {
+        if (!this.active) {
+          return;
+        }
+
+        this.scene.createShockwaveChargeEffect(this.x, this.y, this.shockwaveRadius, this.shockwaveChargeDuration);
+      }
+    );
     this.shockwaveTimer = this.scene.time.delayedCall(
       this.dashDuration + this.shockwaveDelay,
       () => {
@@ -172,7 +191,9 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
 
   deactivate() {
     this.shockwaveTimer?.remove(false);
+    this.shockwaveTelegraphTimer?.remove(false);
     this.shockwaveTimer = null;
+    this.shockwaveTelegraphTimer = null;
     this.scene.hideBossDashTelegraph();
     this.state = 'idle';
     this.slowMultiplier = 1;
