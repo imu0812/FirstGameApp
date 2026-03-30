@@ -1,5 +1,5 @@
 export const WEAPON_DEFS = {
-  arc_bolt: {arc_bolt_projectile_16x32.png
+  arc_bolt: {
     key: 'arc_bolt',
     iconKey: 'arc_bolt_icon',
     projectileKey: 'arc_bolt_projectile',
@@ -33,6 +33,8 @@ export const WEAPON_DEFS = {
   },
   comet_lance: {
     key: 'comet_lance',
+    iconKey: 'comet_lance_icon',
+    projectileKey: 'comet_lance_projectile',
     name: '寒霜冰箭',
     category: 'weapon',
     type: 'pierce',

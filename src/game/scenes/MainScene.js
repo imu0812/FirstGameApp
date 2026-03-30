@@ -1243,6 +1243,7 @@ export class MainScene extends Phaser.Scene {
     this.spawnProjectileSpread({
       ...stats,
       texture: definition.projectileKey ?? 'bullet',
+      scale: (stats.scale ?? 1) * 1.6,
       bodyRadius: 6,
       rotationOffset: 0
     }, baseAngle);
@@ -1250,6 +1251,7 @@ export class MainScene extends Phaser.Scene {
 
   fireCometLance() {
     const stats = this.getWeaponStats('comet_lance');
+    const definition = WEAPON_DEFS.comet_lance;
     const target = this.findNearestEnemy(stats.range);
 
     if (!target) {
@@ -1258,7 +1260,8 @@ export class MainScene extends Phaser.Scene {
     const baseAngle = Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y);
     this.spawnProjectileSpread({
       ...stats,
-      texture: 'lance',
+      texture: definition.projectileKey ?? 'lance',
+      scale: (stats.scale ?? 1) * 1.6,
       bodyRadius: 8,
       statusEffect: {
         slowMultiplier: stats.slowMultiplier,

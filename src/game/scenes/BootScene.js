@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import arcBoltIconImage from '../../assets/arc_bolt.png';
 import arcBoltProjectileImage from '../../assets/arc_bolt_projectile_16x32.png';
+import cometLanceIconImage from '../../assets/comet_lance.png';
+import cometLanceProjectileImage from '../../assets/comet_lance_projectile_16x32.png';
 import rewardMagnetImage from '../../assets/reward_magnet.png';
 
 export class BootScene extends Phaser.Scene {
@@ -11,6 +13,8 @@ export class BootScene extends Phaser.Scene {
   preload() {
     this.load.image('arc_bolt_icon', arcBoltIconImage);
     this.load.image('arc_bolt_projectile_source', arcBoltProjectileImage);
+    this.load.image('comet_lance_icon', cometLanceIconImage);
+    this.load.image('comet_lance_projectile', cometLanceProjectileImage);
     this.load.image('reward_magnet', rewardMagnetImage);
   }
 
