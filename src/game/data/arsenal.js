@@ -18,6 +18,7 @@ export const WEAPON_DEFS = {
   },
   halo_disc: {
     key: 'halo_disc',
+    iconKey: 'halo_disc_icon',
     name: '聖環飛刃',
     category: 'weapon',
     type: 'orbit',

@@ -1243,7 +1243,7 @@ export class MainScene extends Phaser.Scene {
     this.spawnProjectileSpread({
       ...stats,
       texture: definition.projectileKey ?? 'bullet',
-      scale: (stats.scale ?? 1) * 1.6,
+      scale: (stats.scale ?? 1) * 1.2,
       bodyRadius: 6,
       rotationOffset: 0
     }, baseAngle);
@@ -1261,7 +1261,7 @@ export class MainScene extends Phaser.Scene {
     this.spawnProjectileSpread({
       ...stats,
       texture: definition.projectileKey ?? 'lance',
-      scale: (stats.scale ?? 1) * 1.6,
+      scale: (stats.scale ?? 1) * 1.2,
       bodyRadius: 8,
       statusEffect: {
         slowMultiplier: stats.slowMultiplier,

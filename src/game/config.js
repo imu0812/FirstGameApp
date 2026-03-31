@@ -8,12 +8,17 @@ export const gameConfig = {
   parent: 'app',
   width: 360,
   height: 640,
+  resolution: Math.min(window.devicePixelRatio || 1, 2),
   backgroundColor: '#06111d',
   physics: {
     default: 'arcade',
     arcade: {
       debug: false
     }
+  },
+  render: {
+    antialias: true,
+    roundPixels: false
   },
   scene: [BootScene, MainScene, UIScene],
   scale: {

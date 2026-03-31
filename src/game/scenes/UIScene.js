@@ -460,7 +460,7 @@ export class UIScene extends Phaser.Scene {
       button.description.setText(choice.description);
       if (choice.iconKey && this.textures.exists(choice.iconKey)) {
         button.icon.setTexture(choice.iconKey);
-        button.icon.setDisplaySize(42, 42);
+        button.icon.setDisplaySize(36, 36);
         button.icon.setVisible(true);
         button.iconFrame.setVisible(true);
         button.title.setPosition(-72, -22);

@@ -1,10 +1,11 @@
 import Phaser from 'phaser';
-import arcBoltIconImage from '../../assets/arc_bolt.png';
-import arcBoltProjectileImage from '../../assets/arc_bolt_projectile_16x32.png';
-import cometLanceIconImage from '../../assets/comet_lance.png';
-import cometLanceProjectileImage from '../../assets/comet_lance_projectile_16x32.png';
+import arcBoltIconImage from '../../assets/arc_bolt_icon.svg';
+import arcBoltProjectileImage from '../../assets/arc_bolt_projectile_mobile.png';
+import cometLanceIconImage from '../../assets/comet_lance_icon.svg';
+import cometLanceProjectileImage from '../../assets/comet_lance_projectile_mobile.png';
+import haloDiscIconImage from '../../assets/halo_disc.svg';
+import haloDiscProjectileImage from '../../assets/halo_disc_projectile_mobile.png';
 import rewardMagnetImage from '../../assets/reward_magnet.png';
-
 export class BootScene extends Phaser.Scene {
   constructor() {
     super('BootScene');
@@ -12,31 +13,18 @@ export class BootScene extends Phaser.Scene {
 
   preload() {
     this.load.image('arc_bolt_icon', arcBoltIconImage);
-    this.load.image('arc_bolt_projectile_source', arcBoltProjectileImage);
+    this.load.image('arc_bolt_projectile', arcBoltProjectileImage);
     this.load.image('comet_lance_icon', cometLanceIconImage);
     this.load.image('comet_lance_projectile', cometLanceProjectileImage);
+    this.load.image('halo_disc_icon', haloDiscIconImage);
+    this.load.image('orbit_blade', haloDiscProjectileImage);
     this.load.image('reward_magnet', rewardMagnetImage);
   }
 
   create() {
-    this.createArcBoltProjectileTexture();
     this.createTextures();
     this.scene.start('MainScene');
     this.scene.launch('UIScene');
-  }
-
-  createArcBoltProjectileTexture() {
-    const sourceImage = this.textures.get('arc_bolt_projectile_source').getSourceImage();
-    const canvasTexture = this.textures.createCanvas('arc_bolt_projectile', 32, 32);
-    const context = canvasTexture.getContext();
-
-    context.clearRect(0, 0, 32, 32);
-    context.save();
-    context.translate(16, 16);
-    context.rotate(Math.PI / 2);
-    context.drawImage(sourceImage, -sourceImage.width / 2, -sourceImage.height / 2);
-    context.restore();
-    canvasTexture.refresh();
   }
 
   createTextures() {
@@ -94,12 +82,6 @@ export class BootScene extends Phaser.Scene {
     graphics.lineStyle(2, 0x1a7b59, 0.9);
     graphics.strokeCircle(10, 10, 10);
     graphics.generateTexture('gem', 20, 20);
-
-    graphics.clear();
-    graphics.fillStyle(0x7ef9ff, 1);
-    graphics.fillTriangle(12, 0, 24, 12, 12, 24);
-    graphics.fillTriangle(0, 12, 12, 0, 12, 24);
-    graphics.generateTexture('orbit_blade', 24, 24);
 
     graphics.clear();
     graphics.fillStyle(0x8dd1ff, 1);
