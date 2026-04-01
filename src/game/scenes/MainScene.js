@@ -66,7 +66,7 @@ export class MainScene extends Phaser.Scene {
     this.lastChestReward = null;
     this.totalPausedMs = 0;
     this.pauseStartedAt = null;
-
+    this.burningGrounds = [];
 
     this.createArena();
 
@@ -211,23 +211,28 @@ export class MainScene extends Phaser.Scene {
       return;
     }
 
+    const now = this.time.now;
+
     this.player.update();
     this.updatePlayerStatusBar();
     this.updateArenaBackground();
 
     this.enemies.children.iterate((enemy) => {
       if (enemy?.active) {
-        enemy.update(this.player, this.time.now);
+        enemy.update(this.player, now);
+        this.processStatusDamage(enemy, now);
       }
     });
 
     this.bosses.children.iterate((boss) => {
       if (boss?.active) {
-        boss.update(this.player, this.time.now);
+        boss.update(this.player, now);
+        this.processStatusDamage(boss, now);
       }
     });
 
     this.updateOrbitWeapons();
+    this.updateBurningGrounds(now);
     this.updateMagnetizedGems();
     this.updateGemAttraction();
     this.updateRewardDrops();
@@ -561,7 +566,13 @@ export class MainScene extends Phaser.Scene {
         ? Math.round(baseStats.speed * this.derivedStats.projectileSpeedMultiplier * 100) / 100
         : undefined,
       projectiles: (baseStats.projectiles ?? 0) + this.derivedStats.projectileBonus,
-      count: (baseStats.count ?? 0) + this.derivedStats.projectileBonus
+      count: (baseStats.count ?? 0) + this.derivedStats.projectileBonus,
+      burnDamage: baseStats.burnDamage
+        ? Math.max(0.5, Math.round(baseStats.burnDamage * this.derivedStats.damageMultiplier * 100) / 100)
+        : undefined,
+      groundTickDamage: baseStats.groundTickDamage
+        ? Math.max(0.5, Math.round(baseStats.groundTickDamage * this.derivedStats.damageMultiplier * 100) / 100)
+        : undefined
     };
   }
 
@@ -1229,6 +1240,10 @@ export class MainScene extends Phaser.Scene {
     if (weaponKey === 'nova_bloom') {
       this.fireNovaBloom();
     }
+
+    if (weaponKey === 'flame_orb') {
+      this.fireFlameOrb();
+    }
   }
 
   fireArcBolt() {
@@ -1288,6 +1303,36 @@ export class MainScene extends Phaser.Scene {
       explosionDamage: stats.damage,
       explodeOnExpire: true,
       explosionTexture: 'nova_bloom_explosion'
+    }, baseAngle);
+  }
+
+  fireFlameOrb() {
+    const stats = this.getWeaponStats('flame_orb');
+    const definition = WEAPON_DEFS.flame_orb;
+    const target = this.findNearestEnemy(stats.range);
+
+    if (!target) {
+      return;
+    }
+
+    const baseAngle = Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y);
+    this.spawnProjectileSpread({
+      ...stats,
+      texture: definition.projectileKey ?? 'bullet',
+      bodyRadius: 10,
+      explosionRadius: stats.radius,
+      explosionDamage: stats.damage,
+      explodeOnExpire: true,
+      explosionTexture: 'flame_orb_explosion',
+      statusEffect: {
+        type: 'burn',
+        burnDamage: stats.burnDamage,
+        burnDuration: stats.burnDuration,
+        burnTickInterval: stats.burnTickInterval,
+        groundDuration: stats.groundDuration ?? 0,
+        groundTickDamage: stats.groundTickDamage ?? 0,
+        groundTexture: 'flame_orb_ground_fire'
+      }
     }, baseAngle);
   }
 
@@ -1614,12 +1659,35 @@ export class MainScene extends Phaser.Scene {
     }
   }
 
+  processStatusDamage(target, time = this.time.now) {
+    if (!target?.active || typeof target.consumeBurnTick !== 'function') {
+      return;
+    }
+
+    const burnDamage = target.consumeBurnTick(time);
+
+    if (burnDamage <= 0) {
+      return;
+    }
+
+    const targetDied = this.damageEnemy(target, burnDamage);
+
+    if (targetDied) {
+      this.emitStats(true);
+    }
+  }
+
   applyProjectileStatus(enemy, projectile) {
     if (!enemy?.active || !projectile?.statusEffect) {
       return;
     }
 
-    enemy.applyChill(projectile.statusEffect, this.time.now);
+    if (projectile.statusEffect.type === 'burn') {
+      enemy.applyBurn?.(projectile.statusEffect, this.time.now);
+      return;
+    }
+
+    enemy.applyChill?.(projectile.statusEffect, this.time.now);
   }
 
   handleProjectileExplosion(projectile) {
@@ -1638,7 +1706,12 @@ export class MainScene extends Phaser.Scene {
       const distanceSq = dx * dx + dy * dy;
 
       if (distanceSq <= radiusSq) {
-        targetDied = this.damageEnemy(target, projectile.explosionDamage) || targetDied;
+        const wasKilled = this.damageEnemy(target, projectile.explosionDamage);
+        targetDied = wasKilled || targetDied;
+
+        if (!wasKilled) {
+          this.applyProjectileStatus(target, projectile);
+        }
       }
     };
 
@@ -1659,10 +1732,23 @@ export class MainScene extends Phaser.Scene {
     this.bosses.children.iterate(inspectTarget);
     this.chests.children.iterate(inspectChest);
 
+    if ((projectile.statusEffect?.groundDuration ?? 0) > 0 && (projectile.statusEffect?.groundTickDamage ?? 0) > 0) {
+      this.createBurningGround(
+        projectile.x,
+        projectile.y,
+        projectile.explosionRadius * 0.76,
+        projectile.statusEffect.groundDuration,
+        projectile.statusEffect.groundTickDamage,
+        projectile.statusEffect.burnTickInterval ?? 500,
+        projectile.statusEffect.groundTexture ?? null
+      );
+    }
+
     if (targetDied) {
       this.emitStats(true);
     }
   }
+
   createExplosionEffect(x, y, radius, textureKey = null) {
     if (textureKey && this.textures.exists(textureKey)) {
       const burst = this.add.image(x, y, textureKey);
@@ -1695,6 +1781,101 @@ export class MainScene extends Phaser.Scene {
       ease: 'Quad.Out',
       onComplete: () => pulse.destroy()
     });
+  }
+
+  createBurningGround(x, y, radius, duration, damagePerTick, tickInterval = 500, textureKey = null) {
+    if (duration <= 0 || damagePerTick <= 0) {
+      return;
+    }
+
+    let visuals;
+
+    if (textureKey && this.textures.exists(textureKey)) {
+      const glow = this.add.circle(x, y, radius * 0.72, 0xff7a21, 0.14).setDepth(1.36);
+      const groundFire = this.add.image(x, y, textureKey).setDepth(1.45);
+      groundFire.setAlpha(0.88);
+      groundFire.setDisplaySize(radius * 1.9, radius * 1.05);
+
+      this.tweens.add({
+        targets: [glow, groundFire],
+        alpha: { from: 0.88, to: 0.4 },
+        yoyo: true,
+        repeat: -1,
+        duration: 260
+      });
+
+      visuals = [glow, groundFire];
+    } else {
+      const outer = this.add.circle(x, y, radius, 0xff6a00, 0.18).setDepth(1.4);
+      const inner = this.add.circle(x, y, radius * 0.56, 0xffc25a, 0.14).setDepth(1.45);
+
+      this.tweens.add({
+        targets: [outer, inner],
+        alpha: { from: outer.alpha, to: 0.08 },
+        yoyo: true,
+        repeat: -1,
+        duration: 280
+      });
+
+      visuals = [outer, inner];
+    }
+
+    this.burningGrounds.push({
+      x,
+      y,
+      radius,
+      radiusSq: radius * radius,
+      damagePerTick,
+      tickInterval,
+      nextTickAt: this.time.now + tickInterval,
+      expiresAt: this.time.now + duration,
+      visuals
+    });
+  }
+
+  updateBurningGrounds(time = this.time.now) {
+    let targetDied = false;
+
+    for (let index = this.burningGrounds.length - 1; index >= 0; index -= 1) {
+      const ground = this.burningGrounds[index];
+
+      if (time >= ground.expiresAt) {
+        ground.visuals.forEach((visual) => visual?.destroy());
+        this.burningGrounds.splice(index, 1);
+        continue;
+      }
+
+      if (time < ground.nextTickAt) {
+        continue;
+      }
+
+      ground.nextTickAt = time + ground.tickInterval;
+      const hitTarget = (target) => {
+        if (!target?.active) {
+          return;
+        }
+
+        const dx = target.x - ground.x;
+        const dy = target.y - ground.y;
+        if (dx * dx + dy * dy > ground.radiusSq) {
+          return;
+        }
+
+        targetDied = this.damageEnemy(target, ground.damagePerTick) || targetDied;
+      };
+
+      this.enemies.children.iterate(hitTarget);
+      this.bosses.children.iterate(hitTarget);
+    }
+
+    if (targetDied) {
+      this.emitStats(true);
+    }
+  }
+
+  clearBurningGrounds() {
+    this.burningGrounds.forEach((ground) => ground.visuals?.forEach((visual) => visual?.destroy()));
+    this.burningGrounds = [];
   }
 
   handleOrbitBladeHitEnemy(blade, enemy) {
@@ -2220,7 +2401,8 @@ export class MainScene extends Phaser.Scene {
           key: passiveKey,
           nextLevel: currentLevel + 1,
           title: `${def.name} 等級 ${currentLevel + 1}`,
-          description: this.describePassiveLevel(passiveKey, currentLevel + 1)
+          description: this.describePassiveLevel(passiveKey, currentLevel + 1),
+          iconKey: def.iconKey ?? null
         });
       }
     });
@@ -2234,20 +2416,25 @@ export class MainScene extends Phaser.Scene {
     const intro = isUnlock ? `${def.unlockDescription} ` : '';
 
     if (def.type === 'auto') {
-      return `${intro}傷害 ${stats.damage}｜射程 ${stats.range}｜飛矢 ${stats.projectiles}`;
+      return `${intro}傷害 ${stats.damage} ｜ 射程 ${stats.range} ｜ 飛矢 ${stats.projectiles}`;
     }
 
     if (def.type === 'orbit') {
-      return `${intro}飛刃 ${stats.count}｜傷害 ${stats.damage}｜半徑 ${stats.radius}`;
+      return `${intro}飛刃 ${stats.count} ｜ 傷害 ${stats.damage} ｜ 半徑 ${stats.radius}`;
     }
 
     if (def.type === 'pierce') {
       const slowPercent = Math.round((1 - stats.slowMultiplier) * 100);
-      const freezeText = stats.freezeDuration > 0 ? `，冰凍 ${Math.round(stats.freezeDuration / 100) / 10} 秒` : '';
-      return `${intro}傷害 ${stats.damage}｜緩速 ${slowPercent}%｜冰箭 ${stats.projectiles}${freezeText}`;
+      const freezeText = stats.freezeDuration > 0 ? ` ｜ 冰凍 ${Math.round(stats.freezeDuration / 100) / 10} 秒` : '';
+      return `${intro}傷害 ${stats.damage} ｜ 緩速 ${slowPercent}% ｜ 冰箭 ${stats.projectiles}${freezeText}`;
     }
 
-    return `${intro}傷害 ${stats.damage}｜爆炸 ${stats.radius}｜種子 ${stats.projectiles}`;
+    if (def.type === 'explosive_dot') {
+      const groundText = stats.groundDuration ? ' ｜ 燃地 1' : '';
+      return `${intro}傷害 ${stats.damage} ｜ 爆炸 ${stats.radius} ｜ 灼燒 ${stats.burnDamage}${groundText}`;
+    }
+
+    return `${intro}傷害 ${stats.damage} ｜ 爆炸 ${stats.radius} ｜ 種子 ${stats.projectiles}`;
   }
 
   describePassiveLevel(key, level) {
@@ -2265,7 +2452,7 @@ export class MainScene extends Phaser.Scene {
       const effects = [];
 
       if (stats.projectileBonus) {
-        effects.push(`獲得 +${stats.projectileBonus} 投射物`);
+        effects.push(`投射物 +${stats.projectileBonus}`);
       }
 
       if (stats.cooldownMultiplier) {
@@ -2276,18 +2463,18 @@ export class MainScene extends Phaser.Scene {
         effects.push(`投射速度 +${Math.round(stats.projectileSpeedBonus * 100)}%`);
       }
 
-      return `本級效果：${effects.join('，')}。`;
+      return `本級效果：${effects.join(' ｜ ')}。`;
     }
 
     if (key === 'move_speed') {
-      return `本級效果：移速 +${stats.moveSpeedBonus}。`;
+      return `本級效果：移動速度 +${stats.moveSpeedBonus}。`;
     }
 
     if (key === 'pickup_radius') {
       return `本級效果：拾取範圍 +${stats.pickupRadiusBonus}。`;
     }
 
-    return `本級效果：生命上限 +${stats.maxHealthBonus}，回復 ${stats.healOnGain}。`;
+    return `本級效果：最大生命 +${stats.maxHealthBonus}，回復 ${stats.healOnGain}。`;
   }
 
   applyUpgrade(upgradeId) {

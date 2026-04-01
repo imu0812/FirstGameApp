@@ -49,6 +49,23 @@ export const WEAPON_DEFS = {
       { range: 440, damage: 5, cooldown: 900, projectiles: 3, speed: 590, lifeSpan: 1320, spread: 0.18, pierce: 3, slowMultiplier: 0.4, slowDuration: 2200, freezeDuration: 1500, tint: 0xe1fbff, scale: 1.12 }
     ]
   },
+  flame_orb: {
+    key: 'flame_orb',
+    iconKey: 'flame_orb_icon',
+    projectileKey: 'flame_orb_projectile',
+    name: '烈焰火球',
+    category: 'weapon',
+    type: 'explosive_dot',
+    maxLevel: 5,
+    unlockDescription: '發射朝前飛行的火球，命中或到達終點時爆炸，並對範圍敵人附加燃燒效果。',
+    levels: [
+      { range: 320, damage: 3, cooldown: 1500, projectiles: 1, speed: 320, lifeSpan: 1000, spread: 0.04, radius: 64, tint: 0xffb36b, scale: 1, burnDamage: 1, burnDuration: 1800, burnTickInterval: 450 },
+      { range: 340, damage: 4, cooldown: 1380, projectiles: 1, speed: 330, lifeSpan: 1040, spread: 0.05, radius: 74, tint: 0xffbf78, scale: 1.02, burnDamage: 1.25, burnDuration: 2200, burnTickInterval: 450 },
+      { range: 360, damage: 4, cooldown: 1260, projectiles: 2, speed: 340, lifeSpan: 1080, spread: 0.12, radius: 82, tint: 0xffc988, scale: 1.04, burnDamage: 1.45, burnDuration: 2400, burnTickInterval: 420 },
+      { range: 380, damage: 5, cooldown: 1120, projectiles: 2, speed: 350, lifeSpan: 1120, spread: 0.14, radius: 90, tint: 0xffd69b, scale: 1.06, burnDamage: 1.7, burnDuration: 2600, burnTickInterval: 400, groundDuration: 1800, groundTickDamage: 1.2 },
+      { range: 400, damage: 6, cooldown: 980, projectiles: 3, speed: 360, lifeSpan: 1160, spread: 0.18, radius: 98, tint: 0xffe5b0, scale: 1.08, burnDamage: 2, burnDuration: 3000, burnTickInterval: 380, groundDuration: 2400, groundTickDamage: 1.8 }
+    ]
+  },
   nova_bloom: {
     key: 'nova_bloom',
     iconKey: 'nova_bloom_icon',
@@ -71,6 +88,7 @@ export const WEAPON_DEFS = {
 export const PASSIVE_DEFS = {
   attack_frequency: {
     key: 'attack_frequency',
+    iconKey: 'passive_attack_frequency',
     name: '攻速提升',
     category: 'passive',
     maxLevel: 5,
@@ -85,6 +103,7 @@ export const PASSIVE_DEFS = {
   },
   damage_boost: {
     key: 'damage_boost',
+    iconKey: 'passive_damage_boost',
     name: '傷害強化',
     category: 'passive',
     maxLevel: 5,
@@ -99,6 +118,7 @@ export const PASSIVE_DEFS = {
   },
   projectile_count: {
     key: 'projectile_count',
+    iconKey: 'passive_projectile_count',
     name: '投射增幅',
     category: 'passive',
     stackMode: 'cumulative',
@@ -114,6 +134,7 @@ export const PASSIVE_DEFS = {
   },
   move_speed: {
     key: 'move_speed',
+    iconKey: 'passive_move_speed',
     name: '移動速度',
     category: 'passive',
     maxLevel: 5,
@@ -128,6 +149,7 @@ export const PASSIVE_DEFS = {
   },
   pickup_radius: {
     key: 'pickup_radius',
+    iconKey: 'passive_pickup_radius',
     name: '拾取範圍',
     category: 'passive',
     maxLevel: 5,
@@ -142,6 +164,7 @@ export const PASSIVE_DEFS = {
   },
   max_health: {
     key: 'max_health',
+    iconKey: 'passive_max_health',
     name: '最大生命',
     category: 'passive',
     maxLevel: 5,

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <radialGradient id="bg" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(256 226) rotate(90) scale(250 250)">
+    <stop offset="0%" stop-color="#3B0F1D"/><stop offset="65%" stop-color="#1F1020"/><stop offset="100%" stop-color="#0C0710"/>
+  </radialGradient>
+  <linearGradient id="ring" x1="120" y1="96" x2="392" y2="416" gradientUnits="userSpaceOnUse">
+    <stop offset="0%" stop-color="#FB7185"/><stop offset="100%" stop-color="#BE123C"/>
+  </linearGradient>
+  <linearGradient id="sword" x1="180" y1="348" x2="336" y2="176" gradientUnits="userSpaceOnUse">
+    <stop offset="0%" stop-color="#F43F5E"/><stop offset="50%" stop-color="#FB7185"/><stop offset="100%" stop-color="#FFE3EA"/>
+  </linearGradient>
+  <linearGradient id="gem" x1="224" y1="152" x2="288" y2="224" gradientUnits="userSpaceOnUse">
+    <stop offset="0%" stop-color="#FFE0E7"/><stop offset="100%" stop-color="#F43F5E"/>
+  </linearGradient>
+  <filter id="g1" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="16"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <filter id="g2" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="8"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<rect x="28" y="28" width="456" height="456" rx="132" fill="url(#bg)"/>
+<circle cx="256" cy="256" r="168" stroke="url(#ring)" stroke-opacity="0.78" stroke-width="14"/>
+<circle cx="256" cy="256" r="132" stroke="#FFE7EE" stroke-opacity="0.16" stroke-width="6" stroke-dasharray="8 16"/>
+<g filter="url(#g1)">
+  <path d="M182 318 L228 272 L184 228 L210 202 L254 246 L316 184 C340 160 370 152 392 164 C380 190 370 216 350 236 L288 298 L332 342 L306 368 L262 324 L216 370 Z" fill="url(#sword)"/>
+  <path d="M332 152 L356 126 L386 156 L360 180 Z" fill="url(#gem)"/>
+</g>
+<g filter="url(#g2)">
+  <path d="M124 256 L168 266" stroke="#FFE7EE" stroke-opacity="0.82" stroke-width="12" stroke-linecap="round"/>
+  <path d="M140 198 L176 220" stroke="#FFC3CF" stroke-opacity="0.72" stroke-width="10" stroke-linecap="round"/>
+  <path d="M140 314 L178 294" stroke="#FFC3CF" stroke-opacity="0.72" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="226" cy="274" r="18" fill="#FFF0F4" fill-opacity="0.48"/>
+  <path d="M208 126 L226 168 L270 182 L230 198 L218 242 L194 206 L150 204 L182 176 L170 132 Z" fill="#FFE7EE" fill-opacity="0.74"/>
+</g>
+</svg>

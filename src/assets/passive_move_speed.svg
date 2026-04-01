@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <radialGradient id="bg" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(256 226) rotate(90) scale(250 250)">
+    <stop offset="0%" stop-color="#123320"/><stop offset="65%" stop-color="#0F1E18"/><stop offset="100%" stop-color="#05100B"/>
+  </radialGradient>
+  <linearGradient id="ring" x1="120" y1="96" x2="392" y2="416" gradientUnits="userSpaceOnUse">
+    <stop offset="0%" stop-color="#86EFAC"/><stop offset="100%" stop-color="#16A34A"/>
+  </linearGradient>
+  <linearGradient id="boot" x1="148" y1="344" x2="332" y2="170" gradientUnits="userSpaceOnUse">
+    <stop offset="0%" stop-color="#22C55E"/><stop offset="50%" stop-color="#86EFAC"/><stop offset="100%" stop-color="#ECFCCB"/>
+  </linearGradient>
+  <filter id="g1" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="16"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <filter id="g2" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="8"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<rect x="28" y="28" width="456" height="456" rx="132" fill="url(#bg)"/>
+<circle cx="256" cy="256" r="168" stroke="url(#ring)" stroke-opacity="0.78" stroke-width="14"/>
+<circle cx="256" cy="256" r="132" stroke="#ECFCCB" stroke-opacity="0.16" stroke-width="6" stroke-dasharray="8 16"/>
+<g filter="url(#g1)">
+  <path d="M170 158 L252 170 L236 256 C250 286 278 308 314 322 L388 350 C374 384 344 396 310 392 L218 378 C180 372 152 350 148 318 L138 256 C136 220 148 188 170 158 Z" fill="url(#boot)"/>
+</g>
+<g filter="url(#g2)">
+  <path d="M94 220 L150 220" stroke="#ECFCCB" stroke-opacity="0.92" stroke-width="16" stroke-linecap="round"/>
+  <path d="M82 270 L164 270" stroke="#D9F99D" stroke-opacity="0.82" stroke-width="14" stroke-linecap="round"/>
+  <path d="M100 320 L154 320" stroke="#A7F3D0" stroke-opacity="0.72" stroke-width="12" stroke-linecap="round"/>
+  <path d="M286 166 C320 142 352 132 392 132" stroke="#ECFCCB" stroke-opacity="0.72" stroke-width="10" stroke-linecap="round"/>
+  <path d="M356 108 L392 132 L354 150" stroke="#ECFCCB" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <radialGradient id="bg" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(256 226) rotate(90) scale(250 250)">
+    <stop offset="0%" stop-color="#3A1220"/><stop offset="65%" stop-color="#200F16"/><stop offset="100%" stop-color="#0A0508"/>
+  </radialGradient>
+  <linearGradient id="ring" x1="120" y1="96" x2="392" y2="416" gradientUnits="userSpaceOnUse">
+    <stop offset="0%" stop-color="#FDA4AF"/><stop offset="100%" stop-color="#DC2626"/>
+  </linearGradient>
+  <linearGradient id="heart" x1="172" y1="328" x2="326" y2="170" gradientUnits="userSpaceOnUse">
+    <stop offset="0%" stop-color="#EF4444"/><stop offset="52%" stop-color="#FB7185"/><stop offset="100%" stop-color="#FFE4E6"/>
+  </linearGradient>
+  <filter id="g1" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="16"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <filter id="g2" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="8"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<rect x="28" y="28" width="456" height="456" rx="132" fill="url(#bg)"/>
+<circle cx="256" cy="256" r="168" stroke="url(#ring)" stroke-opacity="0.78" stroke-width="14"/>
+<circle cx="256" cy="256" r="132" stroke="#FFE4E6" stroke-opacity="0.15" stroke-width="6" stroke-dasharray="8 16"/>
+<g filter="url(#g1)">
+  <path d="M256 384 C240 364 220 346 196 326 C144 282 120 248 120 204 C120 156 156 122 202 122 C226 122 246 132 256 152 C266 132 286 122 310 122 C356 122 392 156 392 204 C392 248 368 282 316 326 C292 346 272 364 256 384 Z" fill="url(#heart)"/>
+</g>
+<g filter="url(#g2)">
+  <path d="M256 178 L256 286" stroke="#FFF1F2" stroke-opacity="0.92" stroke-width="16" stroke-linecap="round"/>
+  <path d="M202 232 L310 232" stroke="#FFF1F2" stroke-opacity="0.92" stroke-width="16" stroke-linecap="round"/>
+  <circle cx="172" cy="308" r="10" fill="#FFE4E6" fill-opacity="0.76"/><circle cx="340" cy="308" r="10" fill="#FFE4E6" fill-opacity="0.76"/>
+  <path d="M154 164 C160 148 170 136 184 128" stroke="#FFE4E6" stroke-opacity="0.64" stroke-width="10" stroke-linecap="round"/>
+</g>
+</svg>

@@ -8,6 +8,16 @@ import haloDiscProjectileImage from '../../assets/halo_disc_projectile_mobile.pn
 import novaBloomIconImage from '../../assets/nova_bloom.svg';
 import novaBloomProjectileImage from '../../assets/nova_bloom_projectile_mobile.png';
 import novaBloomExplosionImage from '../../assets/nova_bloom_explosion.png';
+import flameOrbIconImage from '../../assets/flame_orb.svg';
+import flameOrbProjectileImage from '../../assets/flame_orb_projectile_mobile.png';
+import flameOrbExplosionImage from '../../assets/flame_orb_explosion.png';
+import flameOrbGroundFireImage from '../../assets/flame_orb_ground_fire.png';
+import passiveMaxHealthIcon from '../../assets/passive_max_health.svg';
+import passivePickupRadiusIcon from '../../assets/passive_pickup_radius.svg';
+import passiveMoveSpeedIcon from '../../assets/passive_move_speed.svg';
+import passiveProjectileCountIcon from '../../assets/passive_projectile_count.svg';
+import passiveDamageBoostIcon from '../../assets/passive_damage_boost.svg';
+import passiveAttackFrequencyIcon from '../../assets/passive_attack_frequency.svg';
 import rewardMagnetImage from '../../assets/reward_magnet.png';
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -24,6 +34,16 @@ export class BootScene extends Phaser.Scene {
     this.load.image('nova_bloom_icon', novaBloomIconImage);
     this.load.image('nova_bloom_projectile', novaBloomProjectileImage);
     this.load.image('nova_bloom_explosion', novaBloomExplosionImage);
+    this.load.image('flame_orb_icon', flameOrbIconImage);
+    this.load.image('flame_orb_projectile', flameOrbProjectileImage);
+    this.load.image('flame_orb_explosion', flameOrbExplosionImage);
+    this.load.image('flame_orb_ground_fire', flameOrbGroundFireImage);
+    this.load.image('passive_attack_frequency', passiveAttackFrequencyIcon);
+    this.load.image('passive_damage_boost', passiveDamageBoostIcon);
+    this.load.image('passive_projectile_count', passiveProjectileCountIcon);
+    this.load.image('passive_move_speed', passiveMoveSpeedIcon);
+    this.load.image('passive_pickup_radius', passivePickupRadiusIcon);
+    this.load.image('passive_max_health', passiveMaxHealthIcon);
     this.load.image('reward_magnet', rewardMagnetImage);
   }
 

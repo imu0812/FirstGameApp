@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <radialGradient id="bg" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(256 226) rotate(90) scale(250 250)">
+    <stop offset="0%" stop-color="#26104A"/><stop offset="65%" stop-color="#1A1030"/><stop offset="100%" stop-color="#080712"/>
+  </radialGradient>
+  <linearGradient id="ring" x1="120" y1="96" x2="392" y2="416" gradientUnits="userSpaceOnUse">
+    <stop offset="0%" stop-color="#C084FC"/><stop offset="100%" stop-color="#7C3AED"/>
+  </linearGradient>
+  <linearGradient id="arrow" x1="146" y1="340" x2="366" y2="184" gradientUnits="userSpaceOnUse">
+    <stop offset="0%" stop-color="#A855F7"/><stop offset="52%" stop-color="#C084FC"/><stop offset="100%" stop-color="#F5D0FE"/>
+  </linearGradient>
+  <filter id="g1" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="16"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <filter id="g2" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="8"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<rect x="28" y="28" width="456" height="456" rx="132" fill="url(#bg)"/>
+<circle cx="256" cy="256" r="168" stroke="url(#ring)" stroke-opacity="0.78" stroke-width="14"/>
+<circle cx="256" cy="256" r="132" stroke="#F5E8FF" stroke-opacity="0.16" stroke-width="6" stroke-dasharray="8 16"/>
+<g filter="url(#g1)">
+  <path d="M130 296 L252 220 L252 180 L378 256 L252 332 L252 292 Z" fill="url(#arrow)" fill-opacity="0.94"/>
+  <path d="M102 230 L214 170 L214 144 L320 208 L214 270 L214 244 Z" fill="url(#arrow)" fill-opacity="0.58"/>
+  <path d="M102 282 L214 342 L214 368 L320 304 L214 242 L214 268 Z" fill="url(#arrow)" fill-opacity="0.58"/>
+</g>
+<g filter="url(#g2)">
+  <path d="M128 188 C176 146 220 128 270 126" stroke="#E9D5FF" stroke-opacity="0.78" stroke-width="10" stroke-linecap="round"/>
+  <path d="M130 324 C180 358 222 376 272 382" stroke="#D8B4FE" stroke-opacity="0.64" stroke-width="9" stroke-linecap="round"/>
+  <circle cx="126" cy="188" r="8" fill="#F5E8FF"/><circle cx="130" cy="324" r="7" fill="#E9D5FF"/><circle cx="366" cy="256" r="10" fill="#F5D0FE"/>
+</g>
+</svg>

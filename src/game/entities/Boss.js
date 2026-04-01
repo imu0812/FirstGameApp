@@ -59,6 +59,10 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     this.state = 'idle';
     this.slowMultiplier = 1;
     this.slowUntil = 0;
+    this.burnUntil = 0;
+    this.burnTickDamage = 0;
+    this.burnTickInterval = 500;
+    this.burnNextTickAt = 0;
 
     this.enableBody(true, x, y, true, true);
     this.setActive(true);
@@ -91,9 +95,12 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
       this.setAlpha(1);
     }
 
+    if (time >= this.burnUntil) {
+      this.clearBurn();
+    }
+
     if (time >= this.slowUntil) {
       this.slowMultiplier = 1;
-      this.setTint(this.baseTint);
     }
 
     if (this.state === 'charging') {
@@ -116,6 +123,8 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
       return;
     }
 
+    this.refreshStatusTint(time);
+
     if (time >= this.nextDashAt) {
       this.startDashCharge(player, time);
       return;
@@ -128,6 +137,20 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
 
     this.scene.physics.moveToObject(this, player, this.moveSpeed * this.slowMultiplier);
     this.rotation = Phaser.Math.Angle.Between(this.x, this.y, player.x, player.y);
+  }
+
+  refreshStatusTint(time = this.scene.time.now) {
+    if (time < this.burnUntil) {
+      this.setTint(0xffad72);
+      return;
+    }
+
+    if (time < this.slowUntil) {
+      this.setTint(0xbfe8ff);
+      return;
+    }
+
+    this.setTint(this.baseTint);
   }
 
   startDashCharge(player, time) {
@@ -176,8 +199,48 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     if (slowDuration > 0 && slowMultiplier < this.slowMultiplier) {
       this.slowMultiplier = slowMultiplier;
       this.slowUntil = Math.max(this.slowUntil, time + Math.floor(slowDuration * 0.5));
-      this.setTint(0xbfe8ff);
     }
+
+    this.refreshStatusTint(time);
+  }
+
+  applyBurn(effect = {}, time = 0) {
+    const burnDamage = effect.burnDamage ?? 0;
+    const burnDuration = effect.burnDuration ?? 0;
+
+    if (burnDamage <= 0 || burnDuration <= 0) {
+      return;
+    }
+
+    this.burnTickDamage = Math.max(this.burnTickDamage, burnDamage);
+    this.burnTickInterval = effect.burnTickInterval ?? 500;
+    this.burnUntil = Math.max(this.burnUntil, time + burnDuration);
+
+    if (this.burnNextTickAt <= time) {
+      this.burnNextTickAt = time + this.burnTickInterval;
+    }
+
+    this.refreshStatusTint(time);
+  }
+
+  consumeBurnTick(time = this.scene.time.now) {
+    if (time >= this.burnUntil) {
+      this.clearBurn();
+      return 0;
+    }
+
+    if (this.burnTickDamage <= 0 || this.burnNextTickAt <= 0 || time < this.burnNextTickAt) {
+      return 0;
+    }
+
+    this.burnNextTickAt = time + this.burnTickInterval;
+    return this.burnTickDamage;
+  }
+
+  clearBurn() {
+    this.burnUntil = 0;
+    this.burnTickDamage = 0;
+    this.burnNextTickAt = 0;
   }
 
   takeDamage(amount) {
@@ -198,6 +261,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     this.state = 'idle';
     this.slowMultiplier = 1;
     this.slowUntil = 0;
+    this.clearBurn();
     this.dashAngle = 0;
     this.dashChargeEndAt = 0;
     this.dashEndAt = 0;
@@ -209,5 +273,3 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     this.setAlpha(1);
   }
 }
-
-

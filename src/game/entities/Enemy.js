@@ -32,6 +32,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.slowMultiplier = 1;
     this.slowUntil = 0;
     this.frozenUntil = 0;
+    this.burnUntil = 0;
+    this.burnTickDamage = 0;
+    this.burnTickInterval = 500;
+    this.burnNextTickAt = 0;
     this.preferredRange = config.preferredRange ?? 0;
     this.minRange = config.minRange ?? 0;
     this.attackRange = config.attackRange ?? 0;
@@ -89,12 +93,15 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     this.freezeOutline.setVisible(false);
 
+    if (time >= this.burnUntil) {
+      this.clearBurn();
+    }
+
     if (time >= this.slowUntil) {
       this.slowMultiplier = 1;
-      this.setTint(this.baseTint);
-    } else {
-      this.setTint(0x8fd8ff);
     }
+
+    this.refreshStatusTint(time);
 
     if (this.isRanged) {
       this.updateRangedBehavior(player, time);
@@ -103,6 +110,25 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     this.scene.physics.moveToObject(this, player, this.moveSpeed * this.slowMultiplier);
     this.rotation = Phaser.Math.Angle.Between(this.x, this.y, player.x, player.y);
+  }
+
+  refreshStatusTint(time = this.scene.time.now) {
+    if (time < this.frozenUntil) {
+      this.setTint(0xbfe8ff);
+      return;
+    }
+
+    if (time < this.burnUntil) {
+      this.setTint(0xffa463);
+      return;
+    }
+
+    if (time < this.slowUntil) {
+      this.setTint(0x8fd8ff);
+      return;
+    }
+
+    this.setTint(this.baseTint);
   }
 
   updateRangedBehavior(player, time) {
@@ -118,7 +144,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       if (time >= this.windupUntil) {
         this.windupUntil = 0;
         this.windupFlash = false;
-        this.setTint(this.baseTint);
+        this.refreshStatusTint(time);
         this.scene.fireEliteProjectile(this, angleToPlayer);
         this.nextShotAt = time + this.projectileCooldown;
       }
@@ -168,9 +194,46 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       return;
     }
 
-    if (slowDuration > 0) {
-      this.setTint(0x8fd8ff);
+    this.refreshStatusTint(time);
+  }
+
+  applyBurn(effect = {}, time = 0) {
+    const burnDamage = effect.burnDamage ?? 0;
+    const burnDuration = effect.burnDuration ?? 0;
+
+    if (burnDamage <= 0 || burnDuration <= 0) {
+      return;
     }
+
+    this.burnTickDamage = Math.max(this.burnTickDamage, burnDamage);
+    this.burnTickInterval = effect.burnTickInterval ?? 500;
+    this.burnUntil = Math.max(this.burnUntil, time + burnDuration);
+
+    if (this.burnNextTickAt <= time) {
+      this.burnNextTickAt = time + this.burnTickInterval;
+    }
+
+    this.refreshStatusTint(time);
+  }
+
+  consumeBurnTick(time = this.scene.time.now) {
+    if (time >= this.burnUntil) {
+      this.clearBurn();
+      return 0;
+    }
+
+    if (this.burnTickDamage <= 0 || this.burnNextTickAt <= 0 || time < this.burnNextTickAt) {
+      return 0;
+    }
+
+    this.burnNextTickAt = time + this.burnTickInterval;
+    return this.burnTickDamage;
+  }
+
+  clearBurn() {
+    this.burnUntil = 0;
+    this.burnTickDamage = 0;
+    this.burnNextTickAt = 0;
   }
 
   takeDamage(amount) {
@@ -184,6 +247,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.slowMultiplier = 1;
     this.slowUntil = 0;
     this.frozenUntil = 0;
+    this.clearBurn();
     this.windupUntil = 0;
     this.windupFlash = false;
     this.setTint(this.baseTint ?? 0xffffff);
