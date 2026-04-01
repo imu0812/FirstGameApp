@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <defs>
+    <filter id="g1" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2.2" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <linearGradient id="bladeGrad" x1="0%" y1="50%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#71e5ff" stop-opacity="0.72"/>
+      <stop offset="55%" stop-color="#86efff" stop-opacity="0.92"/>
+      <stop offset="100%" stop-color="#f0ffff" stop-opacity="1"/>
+    </linearGradient>
+    <linearGradient id="wakeGrad" x1="0%" y1="50%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#9af4ff" stop-opacity="0.0"/>
+      <stop offset="45%" stop-color="#9af4ff" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#dfffff" stop-opacity="0.58"/>
+    </linearGradient>
+    <mask id="crescentMask">
+      <rect width="48" height="48" fill="black"/>
+      <path d="M10 24 C14 18, 19 14, 28 12 C36 13, 42 18, 44 24 C42 30, 36 35, 28 36 C20 35, 14 31, 10 24 Z" fill="white"/>
+      <path d="M17 24 C20 20, 24 18, 29 18 C34 19, 37 21, 38 24 C37 27, 34 29, 29 30 C24 30, 20 28, 17 24 Z" fill="black"/>
+    </mask>
+  </defs>
+
+  <g filter="url(#g1)">
+    <path d="M4 24 C8 19, 14 18, 20 20 C24 21, 26 23, 27 24 C26 25, 24 27, 20 28 C14 30, 8 29, 4 24 Z" fill="url(#wakeGrad)"/>
+    <path d="M13 18 C22 13, 33 14, 41 24 C33 34, 22 35, 13 30 C18 27, 19 21, 13 18 Z" fill="#71e5ff" fill-opacity="0.22"/>
+    <ellipse cx="33" cy="24" rx="9" ry="8" fill="#c4fbff" fill-opacity="0.2"/>
+    <path d="M5 24 Q10 18 15 20 Q12 23 6 24" fill="#eaffff" fill-opacity="0.42"/>
+    <path d="M4 24 Q10 30 15 28 Q12 25 5 24" fill="#aff2ff" fill-opacity="0.33"/>
+  </g>
+
+  <g mask="url(#crescentMask)">
+    <rect width="48" height="48" fill="url(#bladeGrad)"/>
+  </g>
+
+  <path d="M12 24 C16 18, 21 15, 28 14 C35 15, 40 18, 42 24" fill="none" stroke="#efffff" stroke-width="2.7" stroke-linecap="round"/>
+  <path d="M18 24 C21 21, 24 20, 29 20 C33 20.5, 35 22, 37 24" fill="none" stroke="#aef6ff" stroke-width="1.7" stroke-linecap="round"/>
+
+  <polygon points="34,18 45,22 38,24" fill="#f2ffff"/>
+  <polygon points="38,24 45,26 34,30" fill="#8deeff" fill-opacity="0.9"/>
+  <polygon points="30,13 36,10 33,17" fill="#d8ffff" fill-opacity="0.8"/>
+  <polygon points="30,35 36,38 33,31" fill="#9feeff" fill-opacity="0.7"/>
+
+  <path d="M5 22 L13 20 L19 21 L15 23 L8 24 Z" fill="#f0ffff" fill-opacity="0.72"/>
+  <path d="M4 26 L12 28 L18 27 L14 25 L7 24 Z" fill="#94eeff" fill-opacity="0.58"/>
+  <path d="M8 16 L14 14 L18 15 L14 18 Z" fill="#dfffff" fill-opacity="0.45"/>
+  <path d="M8 32 L14 34 L18 33 L14 30 Z" fill="#94eeff" fill-opacity="0.4"/>
+
+  <circle cx="6" cy="15" r="1" fill="#f5ffff" fill-opacity="0.9"/>
+  <circle cx="4" cy="23" r="1" fill="#ddffff" fill-opacity="0.6"/>
+  <circle cx="5" cy="32" r="1" fill="#ccfbff" fill-opacity="0.55"/>
+  <circle cx="10" cy="10" r="1" fill="#ddffff" fill-opacity="0.5"/>
+  <circle cx="11" cy="38" r="1" fill="#ccfbff" fill-opacity="0.48"/>
+</svg>

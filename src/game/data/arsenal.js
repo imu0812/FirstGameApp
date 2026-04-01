@@ -83,6 +83,23 @@ export const WEAPON_DEFS = {
       { range: 400, damage: 5, cooldown: 960, projectiles: 3, speed: 590, lifeSpan: 900, spread: 0.16, tint: 0xe8ffff, scale: 1.1, chainCount: 6, chainRange: 190, chainDelay: 45, chainDamageMultiplier: 0.96, branchCount: 1, branchChains: 3 }
     ]
   },
+  gale_boomerang: {
+    key: 'gale_boomerang',
+    iconKey: 'gale_boomerang_icon',
+    projectileKey: 'gale_boomerang_projectile',
+    name: '風刃迴旋',
+    category: 'weapon',
+    type: 'boomerang',
+    maxLevel: 5,
+    unlockDescription: '投出風刃向前切割，短暫飛行後自動折返；同一路徑可對同一批敵人造成二次命中。',
+    levels: [
+      { range: 280, damage: 2, cooldown: 1320, projectiles: 1, speed: 340, lifeSpan: 1180, outboundDuration: 470, returnSpeedMultiplier: 1.08, spinSpeed: 0.22, spread: 0.08, pierce: 99, tint: 0xc8fbff, scale: 1.02 },
+      { range: 305, damage: 3, cooldown: 1200, projectiles: 1, speed: 355, lifeSpan: 1240, outboundDuration: 500, returnSpeedMultiplier: 1.12, spinSpeed: 0.24, spread: 0.1, pierce: 99, tint: 0xd3ffff, scale: 1.05 },
+      { range: 330, damage: 3, cooldown: 1080, projectiles: 2, speed: 370, lifeSpan: 1300, outboundDuration: 520, returnSpeedMultiplier: 1.16, spinSpeed: 0.26, spread: 0.2, pierce: 99, tint: 0xdcffff, scale: 1.08 },
+      { range: 350, damage: 4, cooldown: 960, projectiles: 2, speed: 385, lifeSpan: 1340, outboundDuration: 540, returnSpeedMultiplier: 1.2, spinSpeed: 0.28, spread: 0.24, pierce: 99, tint: 0xe7ffff, scale: 1.1, knockbackForce: 120 },
+      { range: 370, damage: 5, cooldown: 860, projectiles: 2, speed: 400, lifeSpan: 1400, outboundDuration: 560, returnSpeedMultiplier: 1.24, spinSpeed: 0.3, spread: 0.28, pierce: 99, tint: 0xf2ffff, scale: 1.16, knockbackForce: 160 }
+    ]
+  },
   nova_bloom: {
     key: 'nova_bloom',
     iconKey: 'nova_bloom_icon',

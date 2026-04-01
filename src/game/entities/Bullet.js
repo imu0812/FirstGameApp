@@ -12,8 +12,13 @@ export class Bullet extends Phaser.Physics.Arcade.Sprite {
     this.explodeOnExpire = false;
     this.explosionTexture = null;
     this.chainConfig = null;
+    this.boomerangConfig = null;
     this.statusEffect = null;
-    this.hitTargets = new Set();
+    this.outboundHitTargets = new Set();
+    this.returnHitTargets = new Set();
+    this.isReturning = false;
+    this.returnStartedAt = 0;
+    this.initialAngle = 0;
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
@@ -40,8 +45,13 @@ export class Bullet extends Phaser.Physics.Arcade.Sprite {
     this.explosionTexture = config.explosionTexture ?? null;
     this.explosionDamage = config.explosionDamage ?? config.damage;
     this.chainConfig = config.chainConfig ?? null;
+    this.boomerangConfig = config.boomerangConfig ?? null;
     this.statusEffect = config.statusEffect ?? null;
-    this.hitTargets.clear();
+    this.outboundHitTargets.clear();
+    this.returnHitTargets.clear();
+    this.isReturning = false;
+    this.returnStartedAt = 0;
+    this.initialAngle = config.angle;
 
     this.setTint(config.tint ?? 0xffffff);
     this.setScale(config.scale ?? 1);
@@ -58,12 +68,23 @@ export class Bullet extends Phaser.Physics.Arcade.Sprite {
     this.spawnTime = this.scene.time.now;
   }
 
+  startReturn(time = this.scene.time.now) {
+    if (this.isReturning) {
+      return;
+    }
+
+    this.isReturning = true;
+    this.returnStartedAt = time;
+  }
+
   registerHit(enemy) {
-    if (this.hitTargets.has(enemy)) {
+    const hitSet = this.isReturning ? this.returnHitTargets : this.outboundHitTargets;
+
+    if (hitSet.has(enemy)) {
       return false;
     }
 
-    this.hitTargets.add(enemy);
+    hitSet.add(enemy);
     return true;
   }
 
@@ -83,6 +104,38 @@ export class Bullet extends Phaser.Physics.Arcade.Sprite {
       return;
     }
 
+    if (this.boomerangConfig) {
+      const outboundDuration = this.boomerangConfig.outboundDuration ?? Math.max(260, Math.floor(this.lifeSpan * 0.45));
+      const spinSpeed = this.boomerangConfig.spinSpeed ?? 0.24;
+      this.rotation += spinSpeed;
+
+      if (!this.isReturning && time - this.spawnTime >= outboundDuration) {
+        this.startReturn(time);
+      }
+
+      if (this.isReturning) {
+        const player = this.scene.player;
+
+        if (!player?.active) {
+          this.disableBullet();
+          return;
+        }
+
+        const dx = player.x - this.x;
+        const dy = player.y - this.y;
+        const catchRadius = this.boomerangConfig.catchRadius ?? 26;
+
+        if (dx * dx + dy * dy <= catchRadius * catchRadius) {
+          this.disableBullet();
+          return;
+        }
+
+        const returnSpeed = this.speed * (this.boomerangConfig.returnSpeedMultiplier ?? 1.2);
+        const angle = Math.atan2(dy, dx);
+        this.scene.physics.velocityFromRotation(angle, returnSpeed, this.body.velocity);
+      }
+    }
+
     if (time - this.spawnTime >= this.lifeSpan) {
       if (this.explodeOnExpire && this.explosionRadius > 0) {
         this.scene.handleProjectileExplosion(this);
@@ -93,13 +146,15 @@ export class Bullet extends Phaser.Physics.Arcade.Sprite {
   }
 
   disableBullet() {
-    this.hitTargets.clear();
+    this.outboundHitTargets.clear();
+    this.returnHitTargets.clear();
     this.statusEffect = null;
     this.chainConfig = null;
+    this.boomerangConfig = null;
     this.explosionTexture = null;
+    this.isReturning = false;
+    this.returnStartedAt = 0;
     this.setVelocity(0, 0);
     this.disableBody(true, true);
   }
 }
-
-

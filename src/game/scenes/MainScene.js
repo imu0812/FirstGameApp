@@ -1259,6 +1259,10 @@ export class MainScene extends Phaser.Scene {
     if (weaponKey === 'chain_thunder') {
       this.fireChainThunder();
     }
+
+    if (weaponKey === 'gale_boomerang') {
+      this.fireGaleBoomerang();
+    }
   }
 
   fireArcBolt() {
@@ -1363,6 +1367,31 @@ export class MainScene extends Phaser.Scene {
     }
   }
 
+  fireGaleBoomerang() {
+    const stats = this.getWeaponStats('gale_boomerang');
+    const definition = WEAPON_DEFS.gale_boomerang;
+    const target = this.findNearestEnemy(stats.range);
+
+    if (!target) {
+      return;
+    }
+
+    const baseAngle = Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y);
+    this.spawnProjectileSpread({
+      ...stats,
+      texture: definition.projectileKey ?? 'gale_boomerang_projectile',
+      scale: stats.scale ?? 1.08,
+      bodyRadius: 11,
+      boomerangConfig: {
+        outboundDuration: stats.outboundDuration ?? Math.max(260, Math.floor(stats.lifeSpan * 0.45)),
+        returnSpeedMultiplier: stats.returnSpeedMultiplier ?? 1.2,
+        spinSpeed: stats.spinSpeed ?? 0.24,
+        catchRadius: 28,
+        knockbackForce: stats.knockbackForce ?? 0
+      }
+    }, baseAngle);
+  }
+
   fireFlameOrb() {
     const stats = this.getWeaponStats('flame_orb');
     const definition = WEAPON_DEFS.flame_orb;
@@ -1419,6 +1448,7 @@ export class MainScene extends Phaser.Scene {
         explodeOnExpire: stats.explodeOnExpire,
         explosionTexture: stats.explosionTexture,
         chainConfig: stats.chainConfig,
+        boomerangConfig: stats.boomerangConfig,
         statusEffect: stats.statusEffect
       });
     }
@@ -1885,6 +1915,11 @@ export class MainScene extends Phaser.Scene {
 
     if (!enemyDied) {
       this.applyProjectileStatus(enemy, projectile);
+
+      if (projectile.boomerangConfig?.knockbackForce > 0 && enemy.body) {
+        const angle = Math.atan2(enemy.y - this.player.y, enemy.x - this.player.x);
+        this.physics.velocityFromRotation(angle, projectile.boomerangConfig.knockbackForce, enemy.body.velocity);
+      }
     }
 
     if (!projectile.consumePierce()) {
@@ -2675,6 +2710,11 @@ export class MainScene extends Phaser.Scene {
     if (def.type === 'chain') {
       const branchText = stats.branchCount > 0 ? ` | \u6b21\u5f27 ${stats.branchCount + 1}` : '';
       return `${intro}\u50b7\u5bb3 ${stats.damage} | \u9023\u9396 ${stats.chainCount} | \u5c04\u7a0b ${stats.range}${branchText}`;
+    }
+
+    if (def.type === 'boomerang') {
+      const knockbackText = stats.knockbackForce > 0 ? ' | \u64ca\u9000 1' : '';
+      return `${intro}\u50b7\u5bb3 ${stats.damage} | \u98a8\u5203 ${stats.projectiles} | \u5c04\u7a0b ${stats.range}${knockbackText}`;
     }
 
     return `${intro}\u50b7\u5bb3 ${stats.damage} | \u7206\u70b8 ${stats.radius} | \u7a2e\u5b50 ${stats.projectiles}`;

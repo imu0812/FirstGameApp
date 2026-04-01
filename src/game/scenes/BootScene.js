@@ -5,6 +5,8 @@ import cometLanceIconImage from '../../assets/comet_lance_icon.svg';
 import cometLanceProjectileImage from '../../assets/comet_lance_projectile_mobile.png';
 import chainThunderIconImage from '../../assets/chain_thunder.svg';
 import chainThunderProjectileImage from '../../assets/chain_thunder_projectile_mobile.png';
+import galeBoomerangIconImage from '../../assets/gale_boomerang.svg';
+import galeBoomerangProjectileImage from '../../assets/gale_boomerang_projectile_mobile.png';
 import haloDiscIconImage from '../../assets/halo_disc.svg';
 import haloDiscProjectileImage from '../../assets/halo_disc_projectile_mobile.png';
 import novaBloomIconImage from '../../assets/nova_bloom.svg';
@@ -33,6 +35,8 @@ export class BootScene extends Phaser.Scene {
     this.load.image('comet_lance_projectile', cometLanceProjectileImage);
     this.load.image('chain_thunder_icon', chainThunderIconImage);
     this.load.image('chain_thunder_projectile', chainThunderProjectileImage);
+    this.load.image('gale_boomerang_icon', galeBoomerangIconImage);
+    this.load.image('gale_boomerang_projectile', galeBoomerangProjectileImage);
     this.load.image('halo_disc_icon', haloDiscIconImage);
     this.load.image('orbit_blade', haloDiscProjectileImage);
     this.load.image('nova_bloom_icon', novaBloomIconImage);
