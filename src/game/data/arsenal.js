@@ -51,6 +51,8 @@ export const WEAPON_DEFS = {
   },
   nova_bloom: {
     key: 'nova_bloom',
+    iconKey: 'nova_bloom_icon',
+    projectileKey: 'nova_bloom_projectile',
     name: '新星綻放',
     category: 'weapon',
     type: 'explosive',

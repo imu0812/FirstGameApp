@@ -5,6 +5,9 @@ import cometLanceIconImage from '../../assets/comet_lance_icon.svg';
 import cometLanceProjectileImage from '../../assets/comet_lance_projectile_mobile.png';
 import haloDiscIconImage from '../../assets/halo_disc.svg';
 import haloDiscProjectileImage from '../../assets/halo_disc_projectile_mobile.png';
+import novaBloomIconImage from '../../assets/nova_bloom.svg';
+import novaBloomProjectileImage from '../../assets/nova_bloom_projectile_mobile.png';
+import novaBloomExplosionImage from '../../assets/nova_bloom_explosion.png';
 import rewardMagnetImage from '../../assets/reward_magnet.png';
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -18,6 +21,9 @@ export class BootScene extends Phaser.Scene {
     this.load.image('comet_lance_projectile', cometLanceProjectileImage);
     this.load.image('halo_disc_icon', haloDiscIconImage);
     this.load.image('orbit_blade', haloDiscProjectileImage);
+    this.load.image('nova_bloom_icon', novaBloomIconImage);
+    this.load.image('nova_bloom_projectile', novaBloomProjectileImage);
+    this.load.image('nova_bloom_explosion', novaBloomExplosionImage);
     this.load.image('reward_magnet', rewardMagnetImage);
   }
 
@@ -89,13 +95,6 @@ export class BootScene extends Phaser.Scene {
     graphics.lineStyle(2, 0xe1f5ff, 0.85);
     graphics.strokeRect(0, 0, 26, 8);
     graphics.generateTexture('lance', 26, 8);
-
-    graphics.clear();
-    graphics.fillStyle(0xff9e7a, 1);
-    graphics.fillCircle(12, 12, 12);
-    graphics.fillStyle(0xffd8ca, 0.8);
-    graphics.fillCircle(9, 9, 4);
-    graphics.generateTexture('bomb', 24, 24);
 
     graphics.clear();
     graphics.lineStyle(2, 0xdff7ff, 0.9);

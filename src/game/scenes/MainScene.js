@@ -1273,6 +1273,7 @@ export class MainScene extends Phaser.Scene {
 
   fireNovaBloom() {
     const stats = this.getWeaponStats('nova_bloom');
+    const definition = WEAPON_DEFS.nova_bloom;
     const target = this.findNearestEnemy(stats.range);
 
     if (!target) {
@@ -1281,11 +1282,12 @@ export class MainScene extends Phaser.Scene {
     const baseAngle = Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y);
     this.spawnProjectileSpread({
       ...stats,
-      texture: 'bomb',
+      texture: definition.projectileKey ?? 'bomb',
       bodyRadius: 10,
       explosionRadius: stats.radius,
       explosionDamage: stats.damage,
-      explodeOnExpire: true
+      explodeOnExpire: true,
+      explosionTexture: 'nova_bloom_explosion'
     }, baseAngle);
   }
 
@@ -1313,6 +1315,7 @@ export class MainScene extends Phaser.Scene {
         explosionRadius: stats.explosionRadius,
         explosionDamage: stats.explosionDamage,
         explodeOnExpire: stats.explodeOnExpire,
+        explosionTexture: stats.explosionTexture,
         statusEffect: stats.statusEffect
       });
     }
@@ -1623,7 +1626,7 @@ export class MainScene extends Phaser.Scene {
     const radiusSq = projectile.explosionRadius * projectile.explosionRadius;
     let targetDied = false;
 
-    this.createExplosionEffect(projectile.x, projectile.y, projectile.explosionRadius);
+    this.createExplosionEffect(projectile.x, projectile.y, projectile.explosionRadius, projectile.explosionTexture);
 
     const inspectTarget = (target) => {
       if (!target?.active) {
@@ -1660,7 +1663,26 @@ export class MainScene extends Phaser.Scene {
       this.emitStats(true);
     }
   }
-  createExplosionEffect(x, y, radius) {
+  createExplosionEffect(x, y, radius, textureKey = null) {
+    if (textureKey && this.textures.exists(textureKey)) {
+      const burst = this.add.image(x, y, textureKey);
+      burst.setDepth(3);
+      burst.setAlpha(0.94);
+      burst.setAngle(Phaser.Math.Between(-10, 10));
+      burst.setDisplaySize(radius * 1.75, radius * 1.75);
+
+      this.tweens.add({
+        targets: burst,
+        alpha: 0,
+        scaleX: 1.32,
+        scaleY: 1.32,
+        duration: 260,
+        ease: 'Cubic.Out',
+        onComplete: () => burst.destroy()
+      });
+      return;
+    }
+
     const pulse = this.add.circle(x, y, radius * 0.45, 0xffc9b4, 0.4);
     pulse.setDepth(3);
 
