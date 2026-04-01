@@ -67,6 +67,8 @@ export class MainScene extends Phaser.Scene {
     this.totalPausedMs = 0;
     this.pauseStartedAt = null;
     this.burningGrounds = [];
+    this.bossPhaseIntervalSeconds = 150;
+    this.nextBossEligibleAt = this.bossPhases[0]?.spawnAt ?? 0;
 
     this.createArena();
 
@@ -659,8 +661,17 @@ export class MainScene extends Phaser.Scene {
       return;
     }
 
-    const nextPhase = this.bossPhases.find((phase) => !this.bossSpawnFlags[phase.phase] && this.getElapsedTime() >= phase.spawnAt);
+    const elapsedTime = this.getElapsedTime();
+    const nextPhase = this.bossPhases.find((phase) => !this.bossSpawnFlags[phase.phase]);
     if (!nextPhase) {
+      return;
+    }
+
+    const requiredTime = nextPhase.phase === 1
+      ? nextPhase.spawnAt
+      : Math.max(nextPhase.spawnAt, this.nextBossEligibleAt ?? 0);
+
+    if (elapsedTime < requiredTime) {
       return;
     }
 
@@ -1938,6 +1949,7 @@ export class MainScene extends Phaser.Scene {
       return;
     }
 
+    this.nextBossEligibleAt = this.getElapsedTime() + this.bossPhaseIntervalSeconds;
     this.normalSpawnResumeAt = this.getProgressTimeMs() + this.bossSpawnGraceDuration;
     this.emitStats(true);
   }
@@ -2568,6 +2580,7 @@ export class MainScene extends Phaser.Scene {
     this.pendingBossPhase = null;
     this.currentBossPhase = 0;
     this.bossSpawnFlags = Object.fromEntries(this.bossPhases.map((phase) => [phase.phase, false]));
+    this.nextBossEligibleAt = this.bossPhases[0]?.spawnAt ?? 0;
     this.normalSpawnResumeAt = 0;
     this.spawnSuppressionStartedAt = null;
     this.totalSpawnSuppressedMs = 0;
