@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <defs>
+    <filter id="g1" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2.1" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <linearGradient id="stemGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#4b8f4e"/>
+      <stop offset="100%" stop-color="#7ee06d"/>
+    </linearGradient>
+    <radialGradient id="podGrad" cx="40%" cy="45%" r="70%">
+      <stop offset="0%" stop-color="#d4ff9d"/>
+      <stop offset="55%" stop-color="#8fdc65"/>
+      <stop offset="100%" stop-color="#538e45"/>
+    </radialGradient>
+  </defs>
+
+  <g filter="url(#g1)">
+    <ellipse cx="23" cy="36" rx="13" ry="8" fill="#58d886" fill-opacity="0.22"/>
+    <ellipse cx="27" cy="36" rx="13" ry="6" fill="#88f0a0" fill-opacity="0.18"/>
+    <ellipse cx="39.5" cy="23" rx="8" ry="5" fill="#a8ffa0" fill-opacity="0.12"/>
+    <circle cx="9" cy="18" r="2" fill="#b6ffca" fill-opacity="0.18"/>
+    <circle cx="12" cy="13" r="2" fill="#b6ffca" fill-opacity="0.14"/>
+    <circle cx="39" cy="18" r="2" fill="#b6ffca" fill-opacity="0.16"/>
+    <circle cx="42" cy="26" r="2" fill="#b6ffca" fill-opacity="0.14"/>
+  </g>
+
+  <ellipse cx="22" cy="37" rx="9" ry="6" fill="#3f7d4d"/>
+  <ellipse cx="22" cy="37" rx="6" ry="4" fill="#5ca76a"/>
+  <path d="M16 39 Q11 41 8 43" fill="none" stroke="#5a9d57" stroke-width="2" stroke-linecap="round"/>
+  <path d="M22 41 Q20 44 21 46" fill="none" stroke="#5a9d57" stroke-width="2" stroke-linecap="round"/>
+  <path d="M27 39 Q33 41 38 43" fill="none" stroke="#5a9d57" stroke-width="2" stroke-linecap="round"/>
+
+  <path d="M20 34 L22 18 L26 15 L29 18 L28 33 L24 35 Z" fill="url(#stemGrad)"/>
+  <path d="M22 33 L25 18" fill="none" stroke="#9ce48d" stroke-width="2" stroke-linecap="round"/>
+
+  <path d="M18 24 L10 21 L8 16 L14 15 L20 18 Z" fill="#63d56f"/>
+  <path d="M27 22 L35 18 L41 20 L38 26 L30 26 Z" fill="#5fcb69"/>
+  <path d="M22 16 L20 9 L25 5 L31 8 L30 14 Z" fill="#78e878"/>
+
+  <path d="M12 18 L18 19 L15 16 Z" fill="#d0ffb6" fill-opacity="0.7"/>
+  <path d="M31 20 L37 21 L33 24 Z" fill="#d0ffb6" fill-opacity="0.65"/>
+  <path d="M24 8 L29 9 L26 12 Z" fill="#d8ffbd" fill-opacity="0.72"/>
+
+  <ellipse cx="29.5" cy="19" rx="6.5" ry="6" fill="#5ea851"/>
+  <ellipse cx="30" cy="19" rx="5" ry="4" fill="#96dc68"/>
+  <ellipse cx="30" cy="19.5" rx="3" ry="2.5" fill="#d6ff9f" fill-opacity="0.85"/>
+
+  <ellipse cx="35.5" cy="20" rx="4.5" ry="3" fill="#567046"/>
+  <ellipse cx="36" cy="20" rx="3" ry="2" fill="#92e777" fill-opacity="0.85"/>
+  <ellipse cx="36.5" cy="20" rx="1.5" ry="1" fill="#ecffd3" fill-opacity="0.9"/>
+
+  <polygon points="31,16 38,13 35,18" fill="#b3ffa2" fill-opacity="0.7"/>
+  <polygon points="32,24 39,27 35,22" fill="#96ef87" fill-opacity="0.62"/>
+
+  <ellipse cx="42.5" cy="21" rx="3.5" ry="3" fill="#69c44f"/>
+  <ellipse cx="43.5" cy="21" rx="2.5" ry="2" fill="#b9ff92" fill-opacity="0.82"/>
+
+  <circle cx="44" cy="16" r="1" fill="#d9ffbe" fill-opacity="0.8"/>
+  <circle cx="46" cy="21" r="1" fill="#d9ffbe" fill-opacity="0.75"/>
+  <circle cx="43" cy="26" r="1" fill="#d9ffbe" fill-opacity="0.68"/>
+
+  <polygon points="21,26 19,23 22,24" fill="#5d7447" fill-opacity="0.8"/>
+  <polygon points="27,27 30,24 27,24" fill="#5d7447" fill-opacity="0.8"/>
+  <polygon points="24,14 22,11 25,12" fill="#5d7447" fill-opacity="0.8"/>
+</svg>

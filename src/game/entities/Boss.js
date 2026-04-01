@@ -63,6 +63,10 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     this.burnTickDamage = 0;
     this.burnTickInterval = 500;
     this.burnNextTickAt = 0;
+    this.poisonUntil = 0;
+    this.poisonTickDamage = 0;
+    this.poisonTickInterval = 600;
+    this.poisonNextTickAt = 0;
 
     this.enableBody(true, x, y, true, true);
     this.setActive(true);
@@ -97,6 +101,10 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
 
     if (time >= this.burnUntil) {
       this.clearBurn();
+    }
+
+    if (time >= this.poisonUntil) {
+      this.clearPoison();
     }
 
     if (time >= this.slowUntil) {
@@ -140,6 +148,11 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
   }
 
   refreshStatusTint(time = this.scene.time.now) {
+    if (time < this.poisonUntil) {
+      this.setTint(0x89e56d);
+      return;
+    }
+
     if (time < this.burnUntil) {
       this.setTint(0xffad72);
       return;
@@ -204,6 +217,45 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     this.refreshStatusTint(time);
   }
 
+  applyPoison(effect = {}, time = 0) {
+    const poisonDamage = effect.poisonDamage ?? 0;
+    const poisonDuration = effect.poisonDuration ?? 0;
+
+    if (poisonDamage <= 0 || poisonDuration <= 0) {
+      return;
+    }
+
+    this.poisonTickDamage = Math.max(this.poisonTickDamage, poisonDamage);
+    this.poisonTickInterval = effect.poisonTickInterval ?? 600;
+    this.poisonUntil = Math.max(this.poisonUntil, time + poisonDuration);
+
+    if (this.poisonNextTickAt <= time) {
+      this.poisonNextTickAt = time + this.poisonTickInterval;
+    }
+
+    this.refreshStatusTint(time);
+  }
+
+  consumePoisonTick(time = this.scene.time.now) {
+    if (time >= this.poisonUntil) {
+      this.clearPoison();
+      return 0;
+    }
+
+    if (this.poisonTickDamage <= 0 || this.poisonNextTickAt <= 0 || time < this.poisonNextTickAt) {
+      return 0;
+    }
+
+    this.poisonNextTickAt = time + this.poisonTickInterval;
+    return this.poisonTickDamage;
+  }
+
+  clearPoison() {
+    this.poisonUntil = 0;
+    this.poisonTickDamage = 0;
+    this.poisonNextTickAt = 0;
+  }
+
   applyBurn(effect = {}, time = 0) {
     const burnDamage = effect.burnDamage ?? 0;
     const burnDuration = effect.burnDuration ?? 0;
@@ -262,6 +314,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     this.slowMultiplier = 1;
     this.slowUntil = 0;
     this.clearBurn();
+    this.clearPoison();
     this.dashAngle = 0;
     this.dashChargeEndAt = 0;
     this.dashEndAt = 0;

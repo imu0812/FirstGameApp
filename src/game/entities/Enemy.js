@@ -36,6 +36,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.burnTickDamage = 0;
     this.burnTickInterval = 500;
     this.burnNextTickAt = 0;
+    this.poisonUntil = 0;
+    this.poisonTickDamage = 0;
+    this.poisonTickInterval = 600;
+    this.poisonNextTickAt = 0;
+    this.rootUntil = 0;
     this.preferredRange = config.preferredRange ?? 0;
     this.minRange = config.minRange ?? 0;
     this.attackRange = config.attackRange ?? 0;
@@ -97,11 +102,20 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       this.clearBurn();
     }
 
+    if (time >= this.poisonUntil) {
+      this.clearPoison();
+    }
+
     if (time >= this.slowUntil) {
       this.slowMultiplier = 1;
     }
 
     this.refreshStatusTint(time);
+
+    if (time < this.rootUntil) {
+      this.setVelocity(0, 0);
+      return;
+    }
 
     if (this.isRanged) {
       this.updateRangedBehavior(player, time);
@@ -115,6 +129,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   refreshStatusTint(time = this.scene.time.now) {
     if (time < this.frozenUntil) {
       this.setTint(0xbfe8ff);
+      return;
+    }
+
+    if (time < this.poisonUntil) {
+      this.setTint(0x89e56d);
       return;
     }
 
@@ -197,6 +216,57 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.refreshStatusTint(time);
   }
 
+  applyRoot(effect = {}, time = 0) {
+    const rootDuration = effect.rootDuration ?? 0;
+
+    if (rootDuration <= 0) {
+      return;
+    }
+
+    this.rootUntil = Math.max(this.rootUntil, time + rootDuration);
+    this.setVelocity(0, 0);
+    this.refreshStatusTint(time);
+  }
+
+  applyPoison(effect = {}, time = 0) {
+    const poisonDamage = effect.poisonDamage ?? 0;
+    const poisonDuration = effect.poisonDuration ?? 0;
+
+    if (poisonDamage <= 0 || poisonDuration <= 0) {
+      return;
+    }
+
+    this.poisonTickDamage = Math.max(this.poisonTickDamage, poisonDamage);
+    this.poisonTickInterval = effect.poisonTickInterval ?? 600;
+    this.poisonUntil = Math.max(this.poisonUntil, time + poisonDuration);
+
+    if (this.poisonNextTickAt <= time) {
+      this.poisonNextTickAt = time + this.poisonTickInterval;
+    }
+
+    this.refreshStatusTint(time);
+  }
+
+  consumePoisonTick(time = this.scene.time.now) {
+    if (time >= this.poisonUntil) {
+      this.clearPoison();
+      return 0;
+    }
+
+    if (this.poisonTickDamage <= 0 || this.poisonNextTickAt <= 0 || time < this.poisonNextTickAt) {
+      return 0;
+    }
+
+    this.poisonNextTickAt = time + this.poisonTickInterval;
+    return this.poisonTickDamage;
+  }
+
+  clearPoison() {
+    this.poisonUntil = 0;
+    this.poisonTickDamage = 0;
+    this.poisonNextTickAt = 0;
+  }
+
   applyBurn(effect = {}, time = 0) {
     const burnDamage = effect.burnDamage ?? 0;
     const burnDuration = effect.burnDuration ?? 0;
@@ -248,6 +318,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.slowUntil = 0;
     this.frozenUntil = 0;
     this.clearBurn();
+    this.clearPoison();
+    this.rootUntil = 0;
     this.windupUntil = 0;
     this.windupFlash = false;
     this.setTint(this.baseTint ?? 0xffffff);

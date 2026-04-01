@@ -8,6 +8,7 @@ import { ExperienceGem } from '../entities/ExperienceGem.js';
 import { OrbitingBlade } from '../entities/OrbitingBlade.js';
 import { Chest } from '../entities/Chest.js';
 import { ChestRewardDrop } from '../entities/ChestRewardDrop.js';
+import { VineTurret } from '../entities/VineTurret.js';
 import { BOSS_PHASES, DIFFICULTY_STAGES, ENEMY_BALANCE, ENEMY_TYPES } from '../data/enemyTypes.js';
 import {
   PASSIVE_DEFS,
@@ -103,6 +104,10 @@ export class MainScene extends Phaser.Scene {
     this.orbitBlades = this.physics.add.group({
       classType: OrbitingBlade,
       maxSize: 18
+    });
+    this.vineTurrets = this.physics.add.group({
+      classType: VineTurret,
+      maxSize: 6
     });
     this.chests = this.physics.add.group({
       classType: Chest,
@@ -234,6 +239,7 @@ export class MainScene extends Phaser.Scene {
     });
 
     this.updateOrbitWeapons();
+    this.updateVineTurrets(now);
     this.updateBurningGrounds(now);
     this.updateMagnetizedGems();
     this.updateGemAttraction();
@@ -569,6 +575,10 @@ export class MainScene extends Phaser.Scene {
         : undefined,
       projectiles: (baseStats.projectiles ?? 0) + this.derivedStats.projectileBonus,
       count: (baseStats.count ?? 0) + this.derivedStats.projectileBonus,
+      summonCount: baseStats.summonCount ?? 0,
+      projectileSpeed: baseStats.projectileSpeed
+        ? Math.round(baseStats.projectileSpeed * this.derivedStats.projectileSpeedMultiplier * 100) / 100
+        : undefined,
       burnDamage: baseStats.burnDamage
         ? Math.max(0.5, Math.round(baseStats.burnDamage * this.derivedStats.damageMultiplier * 100) / 100)
         : undefined,
@@ -1211,6 +1221,7 @@ export class MainScene extends Phaser.Scene {
   syncWeaponSystems() {
     this.refreshWeaponTimers();
     this.syncOrbitBlades();
+    this.syncVineTurrets();
   }
 
   refreshWeaponTimers() {
@@ -1262,6 +1273,10 @@ export class MainScene extends Phaser.Scene {
 
     if (weaponKey === 'gale_boomerang') {
       this.fireGaleBoomerang();
+    }
+
+    if (weaponKey === 'vine_turret') {
+      this.syncVineTurrets();
     }
   }
 
@@ -1390,6 +1405,195 @@ export class MainScene extends Phaser.Scene {
         knockbackForce: stats.knockbackForce ?? 0
       }
     }, baseAngle);
+  }
+
+  syncVineTurrets() {
+    const turretLevel = this.ownedWeapons.vine_turret ?? 0;
+
+    if (turretLevel <= 0) {
+      this.vineTurrets?.children?.iterate((turret) => turret?.deactivate?.());
+      return;
+    }
+
+    const stats = this.getWeaponStats('vine_turret');
+    const desiredCount = Math.max(1, Math.min(4, stats.summonCount ?? 1));
+    const activeTurrets = [];
+
+    this.vineTurrets.children.iterate((turret) => {
+      if (turret?.active) {
+        activeTurrets.push(turret);
+      }
+    });
+
+    while (activeTurrets.length < desiredCount) {
+      let turret = this.vineTurrets.getFirstDead(false);
+
+      if (!turret) {
+        turret = new VineTurret(this, this.player.x, this.player.y);
+        this.vineTurrets.add(turret);
+      }
+
+      const summonPoint = this.getTurretSummonPoint(activeTurrets.length, desiredCount);
+      turret.configure({
+        range: stats.range,
+        cooldown: stats.cooldown,
+        projectileSpeed: stats.projectileSpeed ?? 290,
+        projectileLifeSpan: stats.projectileLifeSpan ?? 1220,
+        projectileDamage: stats.damage,
+        projectileTint: stats.projectileTint ?? 0x9cff85,
+        projectileScale: stats.projectileScale ?? 1.02,
+        projectileBodyRadius: 7,
+        summonDuration: stats.summonDuration ?? 24000,
+        projectileTexture: 'vine_seed_projectile',
+        statusEffect: (stats.poisonDamage ?? 0) > 0 ? { type: 'poison', poisonDamage: stats.poisonDamage, poisonDuration: stats.poisonDuration, poisonTickInterval: stats.poisonTickInterval, rootDuration: stats.rootDuration ?? 0 } : ((stats.rootDuration ?? 0) > 0 ? { type: 'root', rootDuration: stats.rootDuration } : null),
+        explosionRadius: stats.splashRadius ?? 14,
+        explosionDamage: stats.splashDamage ?? stats.damage,
+        explosionTexture: (stats.splashRadius ?? 0) > 0 ? 'vine_turret_poison_splash' : 'vine_turret_poison_burst',
+        tint: stats.tint ?? 0xffffff,
+        scale: stats.scale ?? 0.9
+      }, summonPoint.x, summonPoint.y, activeTurrets.length * 120);
+      this.createTurretSummonEffect(summonPoint.x, summonPoint.y);
+      activeTurrets.push(turret);
+    }
+
+    activeTurrets.forEach((turret, index) => {
+      if (!turret?.active) {
+        return;
+      }
+
+      turret.range = stats.range;
+      turret.fireCooldown = stats.cooldown;
+      turret.projectileSpeed = stats.projectileSpeed ?? 290;
+      turret.projectileLifeSpan = stats.projectileLifeSpan ?? 1220;
+      turret.projectileDamage = stats.damage;
+      turret.projectileTint = stats.projectileTint ?? 0x9cff85;
+      turret.projectileScale = stats.projectileScale ?? 1.02;
+      turret.summonDuration = stats.summonDuration ?? 24000;
+      turret.projectileTexture = 'vine_seed_projectile';
+      turret.statusEffect = (stats.poisonDamage ?? 0) > 0 ? { type: 'poison', poisonDamage: stats.poisonDamage, poisonDuration: stats.poisonDuration, poisonTickInterval: stats.poisonTickInterval, rootDuration: stats.rootDuration ?? 0 } : ((stats.rootDuration ?? 0) > 0 ? { type: 'root', rootDuration: stats.rootDuration } : null);
+      turret.explosionRadius = stats.splashRadius ?? 14;
+      turret.explosionDamage = stats.splashDamage ?? stats.damage;
+      turret.explosionTexture = (stats.splashRadius ?? 0) > 0 ? 'vine_turret_poison_splash' : 'vine_turret_poison_burst';
+      turret.setTint(stats.tint ?? 0xffffff);
+      turret.setScale(stats.scale ?? 0.9);
+
+      if (index >= desiredCount) {
+        turret.deactivate();
+      }
+    });
+
+    this.vineTurrets.children.iterate((turret, index) => {
+      if (!turret) {
+        return;
+      }
+
+      if (index >= desiredCount) {
+        turret.deactivate();
+      }
+    });
+  }
+
+  getTurretSummonPoint(index, total) {
+    const radius = 78 + index * 18;
+    const spreadBase = total <= 1 ? -Math.PI / 2 : -Math.PI / 2 - Math.min(0.42, (total - 1) * 0.14);
+    const spreadStep = total <= 1 ? 0 : Math.min(0.84, 0.42 + total * 0.1);
+    const angle = spreadBase + index * spreadStep;
+    return {
+      x: this.player.x + Math.cos(angle) * radius,
+      y: this.player.y + Math.sin(angle) * radius
+    };
+  }
+
+  updateVineTurrets(time = this.time.now) {
+    if (!this.player?.active) {
+      return;
+    }
+
+    this.vineTurrets.children.iterate((turret) => {
+      if (!turret?.active) {
+        return;
+      }
+
+      turret.updateTurret(
+        this.player,
+        time,
+        (x, y, range) => this.findNearestTargetFrom(x, y, range, false),
+        (source, target) => this.fireVineTurretProjectile(source, target)
+      );
+    });
+  }
+
+  fireVineTurretProjectile(turret, target) {
+    const angle = Phaser.Math.Angle.Between(turret.x, turret.y, target.x, target.y);
+    this.spawnProjectile({
+      x: turret.x,
+      y: turret.y,
+      angle,
+      speed: turret.projectileSpeed,
+      lifeSpan: turret.projectileLifeSpan,
+      damage: turret.projectileDamage,
+      pierce: 0,
+      tint: turret.projectileTint,
+      scale: turret.projectileScale,
+      texture: turret.projectileTexture,
+      bodyRadius: turret.projectileBodyRadius ?? 7,
+      explosionRadius: turret.explosionRadius ?? 0,
+      explosionDamage: turret.explosionDamage ?? turret.projectileDamage,
+      explosionTexture: turret.explosionTexture ?? null,
+      explodeOnExpire: false,
+      statusEffect: turret.statusEffect,
+      rotationOffset: 0
+    });
+  }
+
+  createRootBindEffect(x, y, duration = 650) {
+    if (!this.textures.exists('vine_turret_root_bind')) {
+      return;
+    }
+
+    const bind = this.add.image(x, y, 'vine_turret_root_bind').setDepth(3.2);
+    bind.setAlpha(0.96);
+    bind.setScale(0.96);
+
+    this.tweens.add({
+      targets: bind,
+      alpha: 0.42,
+      scaleX: 1.08,
+      scaleY: 1.08,
+      duration: Math.max(320, Math.min(duration, 1100)),
+      ease: 'Sine.InOut',
+      yoyo: true,
+      repeat: 1,
+      onComplete: () => bind.destroy()
+    });
+  }
+
+  createTurretSummonEffect(x, y) {
+    if (this.textures.exists('vine_turret_summon_land')) {
+      const burst = this.add.image(x, y + 10, 'vine_turret_summon_land').setDepth(1.8);
+      burst.setAlpha(0.94);
+      burst.setScale(0.8);
+      this.tweens.add({
+        targets: burst,
+        alpha: 0,
+        scaleX: 1.14,
+        scaleY: 1.14,
+        duration: 380,
+        ease: 'Cubic.Out',
+        onComplete: () => burst.destroy()
+      });
+      return;
+    }
+
+    const ring = this.add.circle(x, y, 18, 0x85ff9b, 0.22).setDepth(1.8);
+    this.tweens.add({
+      targets: ring,
+      alpha: 0,
+      scaleX: 2,
+      scaleY: 2,
+      duration: 280,
+      onComplete: () => ring.destroy()
+    });
   }
 
   fireFlameOrb() {
@@ -1682,6 +1886,42 @@ export class MainScene extends Phaser.Scene {
     }
   }
 
+  findNearestTargetFrom(originX, originY, maxRange = Number.POSITIVE_INFINITY, includeChests = true) {
+    let nearestTarget = null;
+    let nearestDistanceScore = Number.POSITIVE_INFINITY;
+    const maxRangeSq = Number.isFinite(maxRange) ? maxRange * maxRange : Number.POSITIVE_INFINITY;
+
+    const inspectTarget = (target, priorityBias = 1) => {
+      if (!target?.active) {
+        return;
+      }
+
+      const dx = target.x - originX;
+      const dy = target.y - originY;
+      const distanceSq = dx * dx + dy * dy;
+
+      if (distanceSq > maxRangeSq) {
+        return;
+      }
+
+      const score = distanceSq * priorityBias;
+
+      if (score < nearestDistanceScore) {
+        nearestDistanceScore = score;
+        nearestTarget = target;
+      }
+    };
+
+    this.bosses.children.iterate((target) => inspectTarget(target, 0.92));
+    this.enemies.children.iterate((target) => inspectTarget(target, 1));
+
+    if (includeChests) {
+      this.chests.children.iterate((target) => inspectTarget(target, 1.35));
+    }
+
+    return nearestTarget;
+  }
+
   findNearestEnemy(maxRange = Number.POSITIVE_INFINITY) {
     let nearestTarget = null;
     let nearestDistanceScore = Number.POSITIVE_INFINITY;
@@ -1932,17 +2172,34 @@ export class MainScene extends Phaser.Scene {
   }
 
   processStatusDamage(target, time = this.time.now) {
-    if (!target?.active || typeof target.consumeBurnTick !== 'function') {
+    if (!target?.active) {
       return;
     }
 
-    const burnDamage = target.consumeBurnTick(time);
+    let targetDied = false;
 
-    if (burnDamage <= 0) {
+    if (typeof target.consumeBurnTick === 'function') {
+      const burnDamage = target.consumeBurnTick(time);
+
+      if (burnDamage > 0) {
+        targetDied = this.damageEnemy(target, burnDamage) || targetDied;
+      }
+    }
+
+    if (!target?.active) {
+      if (targetDied) {
+        this.emitStats(true);
+      }
       return;
     }
 
-    const targetDied = this.damageEnemy(target, burnDamage);
+    if (typeof target.consumePoisonTick === 'function') {
+      const poisonDamage = target.consumePoisonTick(time);
+
+      if (poisonDamage > 0) {
+        targetDied = this.damageEnemy(target, poisonDamage) || targetDied;
+      }
+    }
 
     if (targetDied) {
       this.emitStats(true);
@@ -1956,6 +2213,23 @@ export class MainScene extends Phaser.Scene {
 
     if (projectile.statusEffect.type === 'burn') {
       enemy.applyBurn?.(projectile.statusEffect, this.time.now);
+      return;
+    }
+
+    if (projectile.statusEffect.type === 'poison') {
+      enemy.applyPoison?.(projectile.statusEffect, this.time.now);
+      if ((projectile.statusEffect.rootDuration ?? 0) > 0 && !enemy?.isBoss) {
+        enemy.applyRoot?.(projectile.statusEffect, this.time.now);
+        this.createRootBindEffect(enemy.x, enemy.y, projectile.statusEffect.rootDuration);
+      }
+      return;
+    }
+
+    if (projectile.statusEffect.type === 'root') {
+      if (!enemy?.isBoss) {
+        enemy.applyRoot?.(projectile.statusEffect, this.time.now);
+        this.createRootBindEffect(enemy.x, enemy.y, projectile.statusEffect.rootDuration);
+      }
       return;
     }
 
@@ -2024,17 +2298,19 @@ export class MainScene extends Phaser.Scene {
   createExplosionEffect(x, y, radius, textureKey = null) {
     if (textureKey && this.textures.exists(textureKey)) {
       const burst = this.add.image(x, y, textureKey);
+      const isVineSplash = textureKey === 'vine_turret_poison_splash';
+      const isVineBurst = textureKey === 'vine_turret_poison_burst';
       burst.setDepth(3);
-      burst.setAlpha(0.94);
+      burst.setAlpha(isVineSplash ? 0.96 : 0.92);
       burst.setAngle(Phaser.Math.Between(-10, 10));
-      burst.setDisplaySize(radius * 1.75, radius * 1.75);
+      burst.setDisplaySize(radius * (isVineSplash ? 2.05 : isVineBurst ? 1.52 : 1.75), radius * (isVineSplash ? 2.05 : isVineBurst ? 1.52 : 1.75));
 
       this.tweens.add({
         targets: burst,
         alpha: 0,
-        scaleX: 1.32,
-        scaleY: 1.32,
-        duration: 260,
+        scaleX: isVineSplash ? 1.22 : isVineBurst ? 1.16 : 1.32,
+        scaleY: isVineSplash ? 1.22 : isVineBurst ? 1.16 : 1.32,
+        duration: isVineSplash ? 320 : isVineBurst ? 220 : 260,
         ease: 'Cubic.Out',
         onComplete: () => burst.destroy()
       });
@@ -2644,8 +2920,8 @@ export class MainScene extends Phaser.Scene {
           kind: 'weapon',
           key: weaponKey,
           nextLevel: 1,
-          title: `新武器：${def.name}`,
-          description: this.describeWeaponLevel(weaponKey, 1, true),
+          title: def.name,
+          description: this.compactUpgradeDescription(this.describeWeaponLevel(weaponKey, 1, true)),
           iconKey: def.iconKey ?? null
         });
         return;
@@ -2658,7 +2934,7 @@ export class MainScene extends Phaser.Scene {
           key: weaponKey,
           nextLevel: currentLevel + 1,
           title: `${def.name} 等級 ${currentLevel + 1}`,
-          description: this.describeWeaponLevel(weaponKey, currentLevel + 1, false),
+          description: this.compactUpgradeDescription(this.describeWeaponLevel(weaponKey, currentLevel + 1, false)),
           iconKey: def.iconKey ?? null
         });
       }
@@ -2674,7 +2950,7 @@ export class MainScene extends Phaser.Scene {
           key: passiveKey,
           nextLevel: currentLevel + 1,
           title: `${def.name} 等級 ${currentLevel + 1}`,
-          description: this.describePassiveLevel(passiveKey, currentLevel + 1),
+          description: this.compactUpgradeDescription(this.describePassiveLevel(passiveKey, currentLevel + 1), 28),
           iconKey: def.iconKey ?? null
         });
       }
@@ -2683,10 +2959,23 @@ export class MainScene extends Phaser.Scene {
     return upgrades;
   }
 
+  compactUpgradeDescription(text, maxLength = 34) {
+    if (!text) {
+      return '';
+    }
+
+    const normalized = String(text).replace(/\s+/g, ' ').trim();
+    if (normalized.length <= maxLength) {
+      return normalized;
+    }
+
+    return `${normalized.slice(0, Math.max(0, maxLength - 1)).trim()}...`; 
+  }
+
   describeWeaponLevel(key, level, isUnlock) {
     const def = WEAPON_DEFS[key];
     const stats = getWeaponLevelData(key, level);
-    const intro = isUnlock ? `${def.unlockDescription} ` : '';
+    const intro = '';
 
     if (def.type === 'auto') {
       return `${intro}\u50b7\u5bb3 ${stats.damage} | \u5c04\u7a0b ${stats.range} | \u98db\u77e2 ${stats.projectiles}`;
@@ -2715,6 +3004,12 @@ export class MainScene extends Phaser.Scene {
     if (def.type === 'boomerang') {
       const knockbackText = stats.knockbackForce > 0 ? ' | \u64ca\u9000 1' : '';
       return `${intro}\u50b7\u5bb3 ${stats.damage} | \u98a8\u5203 ${stats.projectiles} | \u5c04\u7a0b ${stats.range}${knockbackText}`;
+    }
+
+    if (def.type === 'summon_turret') {
+      const poisonText = stats.poisonDamage > 0 ? ' | \u4e2d\u6bd2 1' : '';
+      const splashText = stats.splashRadius > 0 ? ' | \u6ffe\u5c04 1' : '';
+      return `${intro}\u50b7\u5bb3 ${stats.damage} | \u7832\u53f0 ${stats.summonCount} | \u983b\u7387 ${Math.round(1000 / stats.cooldown * 10) / 10}${poisonText}${splashText}`;
     }
 
     return `${intro}\u50b7\u5bb3 ${stats.damage} | \u7206\u70b8 ${stats.radius} | \u7a2e\u5b50 ${stats.projectiles}`;

@@ -100,6 +100,23 @@ export const WEAPON_DEFS = {
       { range: 370, damage: 5, cooldown: 860, projectiles: 2, speed: 400, lifeSpan: 1400, outboundDuration: 560, returnSpeedMultiplier: 1.24, spinSpeed: 0.3, spread: 0.28, pierce: 99, tint: 0xf2ffff, scale: 1.16, knockbackForce: 160 }
     ]
   },
+  vine_turret: {
+    key: 'vine_turret',
+    iconKey: 'vine_turret_icon',
+    projectileKey: 'vine_turret_projectile',
+    name: '毒藤砲台',
+    category: 'weapon',
+    type: 'summon_turret',
+    maxLevel: 5,
+    unlockDescription: '在玩家附近召喚毒藤砲台，固定節奏朝前發射毒種子，擅長佔點與補持續火力。',
+    levels: [
+      { range: 308, damage: 2, cooldown: 1120, summonCount: 1, summonDuration: 22000, projectileSpeed: 276, projectileLifeSpan: 1280, projectileScale: 1.04, tint: 0xc3ffd2, projectileTint: 0x9cff85, scale: 0.9 },
+      { range: 324, damage: 2, cooldown: 900, summonCount: 1, summonDuration: 23000, projectileSpeed: 288, projectileLifeSpan: 1320, projectileScale: 1.06, tint: 0xcfffdc, projectileTint: 0x9eff7f, scale: 0.92 },
+      { range: 340, damage: 3, cooldown: 840, summonCount: 1, summonDuration: 24000, projectileSpeed: 300, projectileLifeSpan: 1360, projectileScale: 1.08, tint: 0xd8ffe4, projectileTint: 0xa7ff86, scale: 0.94, poisonDamage: 1, poisonDuration: 2400, poisonTickInterval: 520 },
+      { range: 352, damage: 3, cooldown: 780, summonCount: 2, summonDuration: 25500, projectileSpeed: 312, projectileLifeSpan: 1400, projectileScale: 1.1, tint: 0xe2ffeb, projectileTint: 0xb1ff8f, scale: 0.96, poisonDamage: 1.25, poisonDuration: 2800, poisonTickInterval: 500 },
+      { range: 368, damage: 4, cooldown: 720, summonCount: 2, summonDuration: 27000, projectileSpeed: 324, projectileLifeSpan: 1460, projectileScale: 1.14, tint: 0xeefff2, projectileTint: 0xbaff96, scale: 1, poisonDamage: 1.6, poisonDuration: 3200, poisonTickInterval: 480, splashRadius: 60, splashDamage: 3.2, rootDuration: 1000 }
+    ]
+  },
   nova_bloom: {
     key: 'nova_bloom',
     iconKey: 'nova_bloom_icon',
