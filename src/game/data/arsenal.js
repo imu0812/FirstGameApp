@@ -66,6 +66,23 @@ export const WEAPON_DEFS = {
       { range: 400, damage: 6, cooldown: 980, projectiles: 3, speed: 360, lifeSpan: 1160, spread: 0.18, radius: 98, tint: 0xffe5b0, scale: 1.08, burnDamage: 2, burnDuration: 3000, burnTickInterval: 380, groundDuration: 2400, groundTickDamage: 1.8 }
     ]
   },
+  chain_thunder: {
+    key: 'chain_thunder',
+    iconKey: 'chain_thunder_icon',
+    projectileKey: 'chain_thunder_projectile',
+    name: '連鎖雷擊',
+    category: 'weapon',
+    type: 'chain',
+    maxLevel: 5,
+    unlockDescription: '發射一道朝前的雷電能量，命中首個目標後會向附近敵人連鎖彈跳。',
+    levels: [
+      { range: 320, damage: 2, cooldown: 1500, projectiles: 1, speed: 520, lifeSpan: 760, spread: 0.03, tint: 0xa6f3ff, scale: 1.02, chainCount: 2, chainRange: 250, chainDelay: 65, chainDamageMultiplier: 0.92, branchCount: 0, branchChains: 0 },
+      { range: 340, damage: 3, cooldown: 1360, projectiles: 1, speed: 540, lifeSpan: 800, spread: 0.03, tint: 0xb4f7ff, scale: 1.04, chainCount: 3, chainRange: 205, chainDelay: 60, chainDamageMultiplier: 0.93, branchCount: 0, branchChains: 0 },
+      { range: 360, damage: 3, cooldown: 1220, projectiles: 2, speed: 560, lifeSpan: 840, spread: 0.1, tint: 0xc4fbff, scale: 1.06, chainCount: 4, chainRange: 220, chainDelay: 55, chainDamageMultiplier: 0.94, branchCount: 0, branchChains: 0 },
+      { range: 380, damage: 4, cooldown: 1080, projectiles: 2, speed: 575, lifeSpan: 860, spread: 0.12, tint: 0xd4ffff, scale: 1.08, chainCount: 4, chainRange: 235, chainDelay: 50, chainDamageMultiplier: 0.95, branchCount: 1, branchChains: 2 },
+      { range: 400, damage: 5, cooldown: 960, projectiles: 3, speed: 590, lifeSpan: 900, spread: 0.16, tint: 0xe8ffff, scale: 1.1, chainCount: 6, chainRange: 190, chainDelay: 45, chainDamageMultiplier: 0.96, branchCount: 1, branchChains: 3 }
+    ]
+  },
   nova_bloom: {
     key: 'nova_bloom',
     iconKey: 'nova_bloom_icon',

@@ -11,6 +11,7 @@ export class Bullet extends Phaser.Physics.Arcade.Sprite {
     this.explosionRadius = 0;
     this.explodeOnExpire = false;
     this.explosionTexture = null;
+    this.chainConfig = null;
     this.statusEffect = null;
     this.hitTargets = new Set();
 
@@ -38,6 +39,7 @@ export class Bullet extends Phaser.Physics.Arcade.Sprite {
     this.explodeOnExpire = config.explodeOnExpire ?? false;
     this.explosionTexture = config.explosionTexture ?? null;
     this.explosionDamage = config.explosionDamage ?? config.damage;
+    this.chainConfig = config.chainConfig ?? null;
     this.statusEffect = config.statusEffect ?? null;
     this.hitTargets.clear();
 
@@ -93,6 +95,7 @@ export class Bullet extends Phaser.Physics.Arcade.Sprite {
   disableBullet() {
     this.hitTargets.clear();
     this.statusEffect = null;
+    this.chainConfig = null;
     this.explosionTexture = null;
     this.setVelocity(0, 0);
     this.disableBody(true, true);

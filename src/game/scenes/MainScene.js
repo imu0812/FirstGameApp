@@ -1255,6 +1255,10 @@ export class MainScene extends Phaser.Scene {
     if (weaponKey === 'flame_orb') {
       this.fireFlameOrb();
     }
+
+    if (weaponKey === 'chain_thunder') {
+      this.fireChainThunder();
+    }
   }
 
   fireArcBolt() {
@@ -1317,6 +1321,48 @@ export class MainScene extends Phaser.Scene {
     }, baseAngle);
   }
 
+  fireChainThunder() {
+    const stats = this.getWeaponStats('chain_thunder');
+    const chainConfig = {
+      damage: stats.damage,
+      chainCount: Math.max(0, stats.chainCount ?? 0),
+      chainRange: stats.chainRange ?? 150,
+      chainDelay: stats.chainDelay ?? 55,
+      chainDamageMultiplier: stats.chainDamageMultiplier ?? 0.95,
+      branchCount: Math.max(0, stats.branchCount ?? 0),
+      branchChains: Math.max(0, stats.branchChains ?? 0),
+      tint: stats.tint ?? 0xb8f6ff
+    };
+
+    const projectileCount = Math.max(1, stats.projectiles);
+    const reservedTargets = new Set();
+    const primaryTargets = [];
+
+    for (let index = 0; index < projectileCount; index += 1) {
+      const nextTarget = this.findChainTargets(this.player.x, this.player.y, stats.range, reservedTargets, 1)[0] ?? null;
+
+      if (!nextTarget) {
+        break;
+      }
+
+      primaryTargets.push(nextTarget);
+      reservedTargets.add(nextTarget);
+    }
+
+    if (primaryTargets.length === 0) {
+      return;
+    }
+
+    let targetDied = false;
+    primaryTargets.forEach((target) => {
+      targetDied = this.castChainThunderStrike(target, chainConfig, reservedTargets) || targetDied;
+    });
+
+    if (targetDied) {
+      this.emitStats(true);
+    }
+  }
+
   fireFlameOrb() {
     const stats = this.getWeaponStats('flame_orb');
     const definition = WEAPON_DEFS.flame_orb;
@@ -1372,6 +1418,7 @@ export class MainScene extends Phaser.Scene {
         explosionDamage: stats.explosionDamage,
         explodeOnExpire: stats.explodeOnExpire,
         explosionTexture: stats.explosionTexture,
+        chainConfig: stats.chainConfig,
         statusEffect: stats.statusEffect
       });
     }
@@ -1639,6 +1686,174 @@ export class MainScene extends Phaser.Scene {
 
     return nearestTarget;
   }
+  findChainTargets(originX, originY, maxRange, excludedTargets = new Set(), limit = 1) {
+    const candidates = [];
+    const maxRangeSq = maxRange * maxRange;
+
+    const inspectTarget = (target, priorityBias = 1) => {
+      if (!target?.active || excludedTargets.has(target)) {
+        return;
+      }
+
+      const dx = target.x - originX;
+      const dy = target.y - originY;
+      const distanceSq = dx * dx + dy * dy;
+
+      if (distanceSq > maxRangeSq) {
+        return;
+      }
+
+      candidates.push({ target, score: distanceSq * priorityBias });
+    };
+
+    this.bosses.children.iterate((target) => inspectTarget(target, 0.92));
+    this.enemies.children.iterate((target) => inspectTarget(target, 1));
+
+    candidates.sort((left, right) => left.score - right.score);
+    return candidates.slice(0, Math.max(1, limit)).map((entry) => entry.target);
+  }
+
+  createLightningArc(startX, startY, endX, endY, color = 0xb8f6ff, duration = 120) {
+    const segments = 8;
+
+    const drawBolt = (graphics, width, alpha, jitter, startRatio = 0, endRatio = 1) => {
+      const fromX = Phaser.Math.Linear(startX, endX, startRatio);
+      const fromY = Phaser.Math.Linear(startY, endY, startRatio);
+      const toX = Phaser.Math.Linear(startX, endX, endRatio);
+      const toY = Phaser.Math.Linear(startY, endY, endRatio);
+      const dx = toX - fromX;
+      const dy = toY - fromY;
+      const length = Math.max(1, Math.sqrt(dx * dx + dy * dy));
+      const normalX = -dy / length;
+      const normalY = dx / length;
+
+      graphics.clear();
+      graphics.lineStyle(width, color, alpha);
+      graphics.setBlendMode(Phaser.BlendModes.ADD);
+      graphics.beginPath();
+      graphics.moveTo(fromX, fromY);
+
+      for (let index = 1; index < segments; index += 1) {
+        const progress = index / segments;
+        const baseX = Phaser.Math.Linear(fromX, toX, progress);
+        const baseY = Phaser.Math.Linear(fromY, toY, progress);
+        const falloff = 1 - Math.abs(progress - 0.5) * 1.35;
+        const offset = Phaser.Math.FloatBetween(-jitter, jitter) * falloff;
+        graphics.lineTo(baseX + normalX * offset, baseY + normalY * offset);
+      }
+
+      graphics.lineTo(toX, toY);
+      graphics.strokePath();
+    };
+
+    const glow = this.add.graphics().setDepth(3.18);
+    const core = this.add.graphics().setDepth(3.26);
+    const branchA = this.add.graphics().setDepth(3.22);
+    const branchB = this.add.graphics().setDepth(3.22);
+    const flashStart = this.add.circle(startX, startY, 4.2, color, 0.44).setDepth(3.28);
+    const flashEnd = this.add.circle(endX, endY, 5.6, color, 0.62).setDepth(3.28);
+
+    drawBolt(glow, 4.2, 0.28, 18);
+    drawBolt(core, 2.35, 1, 10);
+    drawBolt(branchA, 1.35, 0.62, 8, 0.18, 0.74);
+    drawBolt(branchB, 1.0, 0.42, 6, 0.36, 0.9);
+
+    this.tweens.add({
+      targets: [glow, core, branchA, branchB, flashStart, flashEnd],
+      alpha: 0,
+      duration,
+      ease: 'Cubic.Out',
+      onComplete: () => {
+        glow.destroy();
+        core.destroy();
+        branchA.destroy();
+        branchB.destroy();
+        flashStart.destroy();
+        flashEnd.destroy();
+      }
+    });
+  }
+
+  castChainThunderStrike(target, chainConfig, reservedTargets = new Set()) {
+    if (!target?.active) {
+      return false;
+    }
+
+    const localExcluded = new Set(reservedTargets);
+    localExcluded.add(target);
+
+    this.createLightningArc(
+      this.player.x,
+      this.player.y,
+      target.x,
+      target.y,
+      chainConfig.tint ?? 0xb8f6ff,
+      Math.max(110, (chainConfig.chainDelay ?? 55) * 2)
+    );
+
+    let targetDied = this.damageEnemy(target, chainConfig.damage);
+    targetDied = this.triggerChainLightning(target, chainConfig, localExcluded) || targetDied;
+    return targetDied;
+  }
+
+  triggerChainLightning(originTarget, projectileOrConfig, excludedTargets = null) {
+    const chainConfig = projectileOrConfig?.chainConfig ?? projectileOrConfig;
+
+    if (!chainConfig || chainConfig.chainCount <= 0) {
+      return false;
+    }
+
+    const originPoint = { x: originTarget.x, y: originTarget.y };
+    const localExcluded = excludedTargets ? new Set(excludedTargets) : new Set([originTarget]);
+    localExcluded.add(originTarget);
+    const branchRoots = this.findChainTargets(
+      originPoint.x,
+      originPoint.y,
+      chainConfig.chainRange,
+      localExcluded,
+      1 + (chainConfig.branchCount ?? 0)
+    );
+
+    let targetDied = false;
+
+    branchRoots.forEach((branchRoot, index) => {
+      const branchSteps = index === 0
+        ? chainConfig.chainCount
+        : Math.max(1, chainConfig.branchChains ?? Math.ceil(chainConfig.chainCount / 2));
+      targetDied = this.runChainBranch(originPoint, branchRoot, chainConfig, localExcluded, branchSteps) || targetDied;
+    });
+
+    return targetDied;
+  }
+
+  runChainBranch(originPoint, initialTarget, chainConfig, excludedTargets, maxSteps) {
+    let currentTarget = initialTarget;
+    let fromPoint = originPoint;
+    let targetDied = false;
+
+    for (let step = 0; step < maxSteps && currentTarget; step += 1) {
+      const hitPoint = { x: currentTarget.x, y: currentTarget.y };
+      const damageMultiplier = Math.pow(chainConfig.chainDamageMultiplier ?? 1, step + 1);
+      const chainDamage = Math.max(0.5, Math.round(chainConfig.damage * damageMultiplier * 100) / 100);
+
+      this.createLightningArc(
+        fromPoint.x,
+        fromPoint.y,
+        hitPoint.x,
+        hitPoint.y,
+        chainConfig.tint ?? 0xb8f6ff,
+        Math.max(100, (chainConfig.chainDelay ?? 55) * 2)
+      );
+
+      targetDied = this.damageEnemy(currentTarget, chainDamage) || targetDied;
+      excludedTargets.add(currentTarget);
+      fromPoint = hitPoint;
+      currentTarget = this.findChainTargets(hitPoint.x, hitPoint.y, chainConfig.chainRange, excludedTargets, 1)[0] ?? null;
+    }
+
+    return targetDied;
+  }
+
   handleProjectileHitEnemy(projectile, enemy) {
     if (!projectile.active || !enemy.active) {
       return;
@@ -1652,6 +1867,17 @@ export class MainScene extends Phaser.Scene {
       this.handleProjectileExplosion(projectile);
       projectile.disableBullet();
       this.emitStats(true);
+      return;
+    }
+
+    if (projectile.chainConfig) {
+      let targetDied = this.damageEnemy(enemy, projectile.damage);
+      targetDied = this.triggerChainLightning(enemy, projectile) || targetDied;
+      projectile.disableBullet();
+
+      if (targetDied) {
+        this.emitStats(true);
+      }
       return;
     }
 
@@ -2428,25 +2654,30 @@ export class MainScene extends Phaser.Scene {
     const intro = isUnlock ? `${def.unlockDescription} ` : '';
 
     if (def.type === 'auto') {
-      return `${intro}傷害 ${stats.damage} ｜ 射程 ${stats.range} ｜ 飛矢 ${stats.projectiles}`;
+      return `${intro}\u50b7\u5bb3 ${stats.damage} | \u5c04\u7a0b ${stats.range} | \u98db\u77e2 ${stats.projectiles}`;
     }
 
     if (def.type === 'orbit') {
-      return `${intro}飛刃 ${stats.count} ｜ 傷害 ${stats.damage} ｜ 半徑 ${stats.radius}`;
+      return `${intro}\u98db\u5203 ${stats.count} | \u50b7\u5bb3 ${stats.damage} | \u534a\u5f91 ${stats.radius}`;
     }
 
     if (def.type === 'pierce') {
       const slowPercent = Math.round((1 - stats.slowMultiplier) * 100);
-      const freezeText = stats.freezeDuration > 0 ? ` ｜ 冰凍 ${Math.round(stats.freezeDuration / 100) / 10} 秒` : '';
-      return `${intro}傷害 ${stats.damage} ｜ 緩速 ${slowPercent}% ｜ 冰箭 ${stats.projectiles}${freezeText}`;
+      const freezeText = stats.freezeDuration > 0 ? ` | \u51b0\u51cd ${Math.round(stats.freezeDuration / 100) / 10} \u79d2` : '';
+      return `${intro}\u50b7\u5bb3 ${stats.damage} | \u7de9\u901f ${slowPercent}% | \u51b0\u7bad ${stats.projectiles}${freezeText}`;
     }
 
     if (def.type === 'explosive_dot') {
-      const groundText = stats.groundDuration ? ' ｜ 燃地 1' : '';
-      return `${intro}傷害 ${stats.damage} ｜ 爆炸 ${stats.radius} ｜ 灼燒 ${stats.burnDamage}${groundText}`;
+      const groundText = stats.groundDuration ? ' | \u71c3\u5730 1' : '';
+      return `${intro}\u50b7\u5bb3 ${stats.damage} | \u7206\u70b8 ${stats.radius} | \u707c\u71d2 ${stats.burnDamage}${groundText}`;
     }
 
-    return `${intro}傷害 ${stats.damage} ｜ 爆炸 ${stats.radius} ｜ 種子 ${stats.projectiles}`;
+    if (def.type === 'chain') {
+      const branchText = stats.branchCount > 0 ? ` | \u6b21\u5f27 ${stats.branchCount + 1}` : '';
+      return `${intro}\u50b7\u5bb3 ${stats.damage} | \u9023\u9396 ${stats.chainCount} | \u5c04\u7a0b ${stats.range}${branchText}`;
+    }
+
+    return `${intro}\u50b7\u5bb3 ${stats.damage} | \u7206\u70b8 ${stats.radius} | \u7a2e\u5b50 ${stats.projectiles}`;
   }
 
   describePassiveLevel(key, level) {
