@@ -1,4 +1,4 @@
-﻿import Phaser from 'phaser';
+import Phaser from 'phaser';
 
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y, config) {
@@ -11,6 +11,18 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.freezeOutline.setVisible(false);
     this.freezeOutline.setAlpha(0.92);
     this.freezeOutline.setDepth(this.depth - 1);
+    this.poisonAura = scene.add.image(x, y, 'status_poison_ring');
+    this.poisonAura.setVisible(false);
+    this.poisonAura.setDepth(this.depth - 1);
+    this.burnAura = scene.add.image(x, y, 'status_burn_ring');
+    this.burnAura.setVisible(false);
+    this.burnAura.setDepth(this.depth - 1);
+    this.poisonStatusIcon = scene.add.image(x, y, 'status_poison_icon');
+    this.poisonStatusIcon.setVisible(false);
+    this.poisonStatusIcon.setDepth(this.depth + 1);
+    this.burnStatusIcon = scene.add.image(x, y, 'status_burn_icon');
+    this.burnStatusIcon.setVisible(false);
+    this.burnStatusIcon.setDepth(this.depth + 1);
 
     this.body.setAllowGravity(false);
 
@@ -40,6 +52,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.poisonTickDamage = 0;
     this.poisonTickInterval = 600;
     this.poisonNextTickAt = 0;
+    this.corrosionUntil = 0;
+    this.corrosionBonus = 0;
     this.rootUntil = 0;
     this.preferredRange = config.preferredRange ?? 0;
     this.minRange = config.minRange ?? 0;
@@ -71,6 +85,14 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.freezeOutline.setPosition(x, y);
     this.freezeOutline.setScale((config.scale ?? 1) * 1.22);
     this.freezeOutline.setVisible(false);
+    this.poisonAura.setScale(Math.max(0.92, (config.scale ?? 1) * 1.08));
+    this.poisonAura.setVisible(false);
+    this.burnAura.setScale(Math.max(0.92, (config.scale ?? 1) * 1.08));
+    this.burnAura.setVisible(false);
+    this.poisonStatusIcon.setScale(Math.max(0.78, (config.scale ?? 1) * 0.72));
+    this.poisonStatusIcon.setVisible(false);
+    this.burnStatusIcon.setScale(Math.max(0.78, (config.scale ?? 1) * 0.72));
+    this.burnStatusIcon.setVisible(false);
 
     return this;
   }
@@ -84,10 +106,15 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     if (!this.active || !player?.active) {
       this.setVelocity(0, 0);
       this.freezeOutline.setVisible(false);
+      this.poisonAura.setVisible(false);
+      this.burnAura.setVisible(false);
+      this.poisonStatusIcon.setVisible(false);
+      this.burnStatusIcon.setVisible(false);
       return;
     }
 
     this.freezeOutline.setPosition(this.x, this.y);
+    this.updateStatusVisuals(time);
 
     if (time < this.frozenUntil) {
       this.setVelocity(0, 0);
@@ -148,6 +175,52 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     this.setTint(this.baseTint);
+  }
+
+  updateStatusVisuals(time = this.scene.time.now) {
+    const poisonActive = time < this.poisonUntil;
+    const burnActive = time < this.burnUntil;
+    const baseScale = Math.max(0.78, this.scaleX * 0.72);
+    const iconY = this.y - Math.max(20, this.displayHeight * 0.68);
+
+    this.poisonAura.setVisible(poisonActive);
+    this.burnAura.setVisible(burnActive);
+    this.poisonStatusIcon.setVisible(poisonActive);
+    this.burnStatusIcon.setVisible(burnActive);
+
+    if (!poisonActive && !burnActive) {
+      return;
+    }
+
+    this.poisonAura.setPosition(this.x, this.y);
+    this.burnAura.setPosition(this.x, this.y);
+
+    if (poisonActive && burnActive) {
+      this.poisonStatusIcon.setPosition(this.x - 9, iconY);
+      this.burnStatusIcon.setPosition(this.x + 9, iconY);
+    } else if (poisonActive) {
+      this.poisonStatusIcon.setPosition(this.x, iconY);
+    } else {
+      this.burnStatusIcon.setPosition(this.x, iconY);
+    }
+
+    if (poisonActive) {
+      const poisonPulse = 0.92 + Math.sin(time * 0.013) * 0.08;
+      this.poisonAura.setAlpha(0.24 + Math.sin(time * 0.009) * 0.08);
+      this.poisonAura.setRotation(time * 0.0012);
+      this.poisonAura.setScale(Math.max(0.92, this.scaleX * 1.08) * (0.98 + Math.sin(time * 0.01) * 0.04));
+      this.poisonStatusIcon.setAlpha(0.84 + Math.sin(time * 0.013) * 0.16);
+      this.poisonStatusIcon.setScale(baseScale * poisonPulse);
+    }
+
+    if (burnActive) {
+      const burnPulse = 0.94 + Math.sin(time * 0.02 + 0.7) * 0.1;
+      this.burnAura.setAlpha(0.26 + Math.sin(time * 0.018 + 0.6) * 0.08);
+      this.burnAura.setRotation(-time * 0.0018);
+      this.burnAura.setScale(Math.max(0.92, this.scaleX * 1.08) * (1 + Math.sin(time * 0.017 + 0.4) * 0.05));
+      this.burnStatusIcon.setAlpha(0.88 + Math.sin(time * 0.02 + 0.7) * 0.12);
+      this.burnStatusIcon.setScale(baseScale * burnPulse);
+    }
   }
 
   updateRangedBehavior(player, time) {
@@ -231,19 +304,21 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   applyPoison(effect = {}, time = 0) {
     const poisonDamage = effect.poisonDamage ?? 0;
     const poisonDuration = effect.poisonDuration ?? 0;
-
+    const corrosionBonus = effect.corrosionBonus ?? 0;
+    const corrosionDuration = effect.corrosionDuration ?? poisonDuration;
     if (poisonDamage <= 0 || poisonDuration <= 0) {
       return;
     }
-
     this.poisonTickDamage = Math.max(this.poisonTickDamage, poisonDamage);
     this.poisonTickInterval = effect.poisonTickInterval ?? 600;
     this.poisonUntil = Math.max(this.poisonUntil, time + poisonDuration);
-
     if (this.poisonNextTickAt <= time) {
       this.poisonNextTickAt = time + this.poisonTickInterval;
     }
-
+    if (corrosionBonus > 0 && corrosionDuration > 0) {
+      this.corrosionBonus = Math.max(this.corrosionBonus, corrosionBonus);
+      this.corrosionUntil = Math.max(this.corrosionUntil, time + corrosionDuration);
+    }
     this.refreshStatusTint(time);
   }
 
@@ -265,6 +340,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.poisonUntil = 0;
     this.poisonTickDamage = 0;
     this.poisonNextTickAt = 0;
+    this.corrosionUntil = 0;
+    this.corrosionBonus = 0;
   }
 
   applyBurn(effect = {}, time = 0) {
@@ -307,7 +384,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
 
   takeDamage(amount) {
-    this.health -= amount;
+    const corrosionMultiplier = this.scene.time.now < this.corrosionUntil ? 1 + this.corrosionBonus : 1;
+    this.health -= amount * corrosionMultiplier;
     return this.health <= 0;
   }
 
@@ -319,15 +397,25 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.frozenUntil = 0;
     this.clearBurn();
     this.clearPoison();
+    this.corrosionUntil = 0;
+    this.corrosionBonus = 0;
     this.rootUntil = 0;
     this.windupUntil = 0;
     this.windupFlash = false;
     this.setTint(this.baseTint ?? 0xffffff);
     this.freezeOutline.setVisible(false);
+    this.poisonAura.setVisible(false);
+    this.burnAura.setVisible(false);
+    this.poisonStatusIcon.setVisible(false);
+    this.burnStatusIcon.setVisible(false);
   }
 
   destroy(fromScene) {
     this.freezeOutline?.destroy();
+    this.poisonAura?.destroy();
+    this.burnAura?.destroy();
+    this.poisonStatusIcon?.destroy();
+    this.burnStatusIcon?.destroy();
     super.destroy(fromScene);
   }
 }

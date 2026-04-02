@@ -233,7 +233,7 @@ export const DIFFICULTY_STAGES = [
   {
     stage: 2,
     label: 'Stage 2',
-    startsAt: 30,
+    startsAt: 60,
     spawnDelay: 1260,
     spawnsPerWave: 1,
     weights: {
@@ -246,7 +246,7 @@ export const DIFFICULTY_STAGES = [
   {
     stage: 3,
     label: 'Stage 3',
-    startsAt: 65,
+    startsAt: 95,
     spawnDelay: 1110,
     spawnsPerWave: 1,
     weights: {
@@ -259,7 +259,7 @@ export const DIFFICULTY_STAGES = [
   {
     stage: 4,
     label: 'Stage 4',
-    startsAt: 105,
+    startsAt: 135,
     spawnDelay: 960,
     spawnsPerWave: 2,
     weights: {
@@ -272,7 +272,7 @@ export const DIFFICULTY_STAGES = [
   {
     stage: 5,
     label: 'Stage 5',
-    startsAt: 150,
+    startsAt: 180,
     spawnDelay: 840,
     spawnsPerWave: 2,
     weights: {

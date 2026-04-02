@@ -93,11 +93,11 @@ export const WEAPON_DEFS = {
     maxLevel: 5,
     unlockDescription: '投出風刃向前切割，短暫飛行後自動折返；同一路徑可對同一批敵人造成二次命中。',
     levels: [
-      { range: 280, damage: 2, cooldown: 1320, projectiles: 1, speed: 340, lifeSpan: 1180, outboundDuration: 470, returnSpeedMultiplier: 1.08, spinSpeed: 0.22, spread: 0.08, pierce: 99, tint: 0xc8fbff, scale: 1.02 },
-      { range: 305, damage: 3, cooldown: 1200, projectiles: 1, speed: 355, lifeSpan: 1240, outboundDuration: 500, returnSpeedMultiplier: 1.12, spinSpeed: 0.24, spread: 0.1, pierce: 99, tint: 0xd3ffff, scale: 1.05 },
-      { range: 330, damage: 3, cooldown: 1080, projectiles: 2, speed: 370, lifeSpan: 1300, outboundDuration: 520, returnSpeedMultiplier: 1.16, spinSpeed: 0.26, spread: 0.2, pierce: 99, tint: 0xdcffff, scale: 1.08 },
-      { range: 350, damage: 4, cooldown: 960, projectiles: 2, speed: 385, lifeSpan: 1340, outboundDuration: 540, returnSpeedMultiplier: 1.2, spinSpeed: 0.28, spread: 0.24, pierce: 99, tint: 0xe7ffff, scale: 1.1, knockbackForce: 120 },
-      { range: 370, damage: 5, cooldown: 860, projectiles: 2, speed: 400, lifeSpan: 1400, outboundDuration: 560, returnSpeedMultiplier: 1.24, spinSpeed: 0.3, spread: 0.28, pierce: 99, tint: 0xf2ffff, scale: 1.16, knockbackForce: 160 }
+      { range: 310, damage: 2, cooldown: 1320, projectiles: 1, speed: 340, lifeSpan: 1180, outboundDuration: 470, returnSpeedMultiplier: 1.08, spinSpeed: 0.22, spread: 0.08, pierce: 99, tint: 0xc8fbff, scale: 1.02 },
+      { range: 335, damage: 3, cooldown: 1200, projectiles: 1, speed: 355, lifeSpan: 1240, outboundDuration: 500, returnSpeedMultiplier: 1.12, spinSpeed: 0.24, spread: 0.1, pierce: 99, tint: 0xd3ffff, scale: 1.05 },
+      { range: 360, damage: 3, cooldown: 1080, projectiles: 2, speed: 370, lifeSpan: 1300, outboundDuration: 520, returnSpeedMultiplier: 1.16, spinSpeed: 0.26, spread: 0.2, pierce: 99, tint: 0xdcffff, scale: 1.08 },
+      { range: 380, damage: 4, cooldown: 960, projectiles: 2, speed: 385, lifeSpan: 1340, outboundDuration: 540, returnSpeedMultiplier: 1.2, spinSpeed: 0.28, spread: 0.24, pierce: 99, tint: 0xe7ffff, scale: 1.1, knockbackForce: 120 },
+      { range: 410, damage: 5, cooldown: 860, projectiles: 2, speed: 400, lifeSpan: 1400, outboundDuration: 560, returnSpeedMultiplier: 1.24, spinSpeed: 0.3, spread: 0.28, pierce: 99, tint: 0xf2ffff, scale: 1.16, knockbackForce: 160 }
     ]
   },
   vine_turret: {
@@ -110,11 +110,11 @@ export const WEAPON_DEFS = {
     maxLevel: 5,
     unlockDescription: '在玩家附近召喚毒藤砲台，固定節奏朝前發射毒種子，擅長佔點與補持續火力。',
     levels: [
-      { range: 308, damage: 2, cooldown: 1120, summonCount: 1, summonDuration: 22000, projectileSpeed: 276, projectileLifeSpan: 1280, projectileScale: 1.04, tint: 0xc3ffd2, projectileTint: 0x9cff85, scale: 0.9 },
-      { range: 324, damage: 2, cooldown: 900, summonCount: 1, summonDuration: 23000, projectileSpeed: 288, projectileLifeSpan: 1320, projectileScale: 1.06, tint: 0xcfffdc, projectileTint: 0x9eff7f, scale: 0.92 },
-      { range: 340, damage: 3, cooldown: 840, summonCount: 1, summonDuration: 24000, projectileSpeed: 300, projectileLifeSpan: 1360, projectileScale: 1.08, tint: 0xd8ffe4, projectileTint: 0xa7ff86, scale: 0.94, poisonDamage: 1, poisonDuration: 2400, poisonTickInterval: 520 },
-      { range: 352, damage: 3, cooldown: 780, summonCount: 2, summonDuration: 25500, projectileSpeed: 312, projectileLifeSpan: 1400, projectileScale: 1.1, tint: 0xe2ffeb, projectileTint: 0xb1ff8f, scale: 0.96, poisonDamage: 1.25, poisonDuration: 2800, poisonTickInterval: 500 },
-      { range: 368, damage: 4, cooldown: 720, summonCount: 2, summonDuration: 27000, projectileSpeed: 324, projectileLifeSpan: 1460, projectileScale: 1.14, tint: 0xeefff2, projectileTint: 0xbaff96, scale: 1, poisonDamage: 1.6, poisonDuration: 3200, poisonTickInterval: 480, splashRadius: 60, splashDamage: 3.2, rootDuration: 1000 }
+      { range: 320, damage: 3, cooldown: 980, summonCount: 1, summonDuration: 22000, projectileSpeed: 284, projectileLifeSpan: 1300, projectileScale: 1.05, tint: 0xc3ffd2, projectileTint: 0x9cff85, scale: 0.9, poisonDamage: 0.6, poisonDuration: 2200, poisonTickInterval: 600, corrosionBonus: 0.08, corrosionDuration: 2200, bossPoisonMultiplier: 0.7 },
+      { range: 338, damage: 4, cooldown: 860, summonCount: 2, summonDuration: 23500, projectileSpeed: 296, projectileLifeSpan: 1360, projectileScale: 1.08, tint: 0xcfffdc, projectileTint: 0x9eff7f, scale: 0.93, poisonDamage: 0.9, poisonDuration: 2400, poisonTickInterval: 560, corrosionBonus: 0.1, corrosionDuration: 2400, bossPoisonMultiplier: 0.7 },
+      { range: 352, damage: 4, cooldown: 790, summonCount: 2, summonDuration: 24800, projectileSpeed: 308, projectileLifeSpan: 1400, projectileScale: 1.1, tint: 0xd8ffe4, projectileTint: 0xa7ff86, scale: 0.95, poisonDamage: 1.6, poisonDuration: 2800, poisonTickInterval: 520, corrosionBonus: 0.12, corrosionDuration: 2800, bossPoisonMultiplier: 0.7 },
+      { range: 368, damage: 5, cooldown: 720, summonCount: 3, summonDuration: 26200, projectileSpeed: 320, projectileLifeSpan: 1440, projectileScale: 1.12, tint: 0xe2ffeb, projectileTint: 0xb1ff8f, scale: 0.98, poisonDamage: 2.1, poisonDuration: 3200, poisonTickInterval: 500, corrosionBonus: 0.15, corrosionDuration: 3200, bossPoisonMultiplier: 0.7 },
+      { range: 384, damage: 6, cooldown: 660, summonCount: 3, summonDuration: 27800, projectileSpeed: 334, projectileLifeSpan: 1500, projectileScale: 1.16, tint: 0xeefff2, projectileTint: 0xbaff96, scale: 1.02, poisonDamage: 2.8, poisonDuration: 3600, poisonTickInterval: 460, corrosionBonus: 0.18, corrosionDuration: 3600, bossPoisonMultiplier: 0.7, splashRadius: 64, splashDamage: 4.5, rootDuration: 1000 }
     ]
   },
   nova_bloom: {

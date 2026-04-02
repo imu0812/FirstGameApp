@@ -166,6 +166,7 @@ export class BootScene extends Phaser.Scene {
     graphics.strokePath();
     graphics.generateTexture('ice_shell', 36, 36);
 
+    this.createStatusEffectTextures(graphics);
     this.createRewardPotionTexture(graphics);
     this.createRewardGoldTexture(graphics);
     if (!this.textures.exists('reward_magnet')) {
@@ -177,6 +178,67 @@ export class BootScene extends Phaser.Scene {
     this.createChestTexture(graphics, 'chest_gold', 0xb98518, 0xffe18c, 0x5a3400);
 
     graphics.destroy();
+  }
+
+  createStatusEffectTextures(graphics) {
+    graphics.clear();
+    graphics.fillStyle(0x173824, 0.18);
+    graphics.fillCircle(10, 10, 9);
+    graphics.lineStyle(2, 0x8df08a, 0.95);
+    graphics.strokeCircle(10, 10, 7);
+    graphics.fillStyle(0xc9ffb0, 0.95);
+    graphics.fillCircle(7, 8, 2);
+    graphics.fillCircle(12, 6, 2);
+    graphics.fillCircle(13, 11, 2);
+    graphics.generateTexture('status_poison_icon', 20, 20);
+
+    graphics.clear();
+    graphics.lineStyle(3, 0x63d874, 0.34);
+    graphics.strokeCircle(24, 24, 16);
+    graphics.lineStyle(2, 0xb9ffb1, 0.55);
+    graphics.strokeCircle(24, 24, 11);
+    graphics.fillStyle(0x8dff9d, 0.32);
+    graphics.fillCircle(11, 17, 4);
+    graphics.fillCircle(31, 12, 3);
+    graphics.fillCircle(36, 28, 4);
+    graphics.fillCircle(18, 35, 3);
+    graphics.generateTexture('status_poison_ring', 48, 48);
+
+    graphics.clear();
+    graphics.fillStyle(0x40170d, 0.18);
+    graphics.fillCircle(10, 10, 9);
+    graphics.fillStyle(0xff8f52, 0.95);
+    graphics.beginPath();
+    graphics.moveTo(10, 2);
+    graphics.lineTo(14, 8);
+    graphics.lineTo(12, 8);
+    graphics.lineTo(16, 16);
+    graphics.lineTo(9, 11);
+    graphics.lineTo(11, 11);
+    graphics.lineTo(6, 4);
+    graphics.closePath();
+    graphics.fillPath();
+    graphics.lineStyle(2, 0xffd08a, 0.9);
+    graphics.strokePath();
+    graphics.generateTexture('status_burn_icon', 20, 20);
+
+    graphics.clear();
+    graphics.lineStyle(3, 0xff8a42, 0.34);
+    graphics.strokeCircle(24, 24, 15);
+    graphics.lineStyle(2, 0xffd278, 0.5);
+    graphics.beginPath();
+    graphics.moveTo(12, 31);
+    graphics.lineTo(17, 18);
+    graphics.lineTo(22, 24);
+    graphics.lineTo(26, 12);
+    graphics.lineTo(31, 20);
+    graphics.lineTo(36, 15);
+    graphics.strokePath();
+    graphics.fillStyle(0xffb15d, 0.34);
+    graphics.fillCircle(15, 14, 4);
+    graphics.fillCircle(32, 31, 5);
+    graphics.fillCircle(24, 36, 3);
+    graphics.generateTexture('status_burn_ring', 48, 48);
   }
 
   createRewardPotionTexture(graphics) {

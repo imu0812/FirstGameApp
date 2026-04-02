@@ -3009,7 +3009,9 @@ export class MainScene extends Phaser.Scene {
     if (def.type === 'summon_turret') {
       const poisonText = stats.poisonDamage > 0 ? ' | \u4e2d\u6bd2 1' : '';
       const splashText = stats.splashRadius > 0 ? ' | \u6ffe\u5c04 1' : '';
-      return `${intro}\u50b7\u5bb3 ${stats.damage} | \u7832\u53f0 ${stats.summonCount} | \u983b\u7387 ${Math.round(1000 / stats.cooldown * 10) / 10}${poisonText}${splashText}`;
+      const durationText = stats.summonDuration ? ` | \u6301\u7e8c ${Math.round(stats.summonDuration / 100) / 10}\u79d2` : '';
+      const cooldownText = stats.cooldown ? ` | \u51b7\u537b ${Math.round(stats.cooldown / 100) / 10}\u79d2` : '';
+      return `${intro}\u50b7\u5bb3 ${stats.damage} | \u7832\u53f0 ${stats.summonCount}${durationText}${cooldownText}${poisonText}${splashText}`;
     }
 
     return `${intro}\u50b7\u5bb3 ${stats.damage} | \u7206\u70b8 ${stats.radius} | \u7a2e\u5b50 ${stats.projectiles}`;
