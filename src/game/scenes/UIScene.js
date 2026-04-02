@@ -15,6 +15,8 @@ export class UIScene extends Phaser.Scene {
       pause: Phaser.Input.Keyboard.KeyCodes.P,
       escape: Phaser.Input.Keyboard.KeyCodes.ESC
     });
+    this.levelUpRefreshCost = 50;
+    this.currentGold = 0;
 
     this.expBarBackground = this.add.rectangle(12, 8, this.scale.width - 24, 8, 0x07131d, 0.88).setOrigin(0, 0).setScrollFactor(0);
     this.expBarFill = this.add.rectangle(12, 8, 0, 8, 0x75f2b7, 1).setOrigin(0, 0).setScrollFactor(0);
@@ -52,6 +54,7 @@ export class UIScene extends Phaser.Scene {
     this.createLevelUpMenu();
     this.createGameOverMenu();
     this.createBossWarning();
+    this.createObjectiveIndicator();
 
     this.input.addPointer(2);
     this.input.on('pointerdown', this.handlePointerDown, this);
@@ -90,6 +93,8 @@ export class UIScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.pauseKeys.pause) || Phaser.Input.Keyboard.JustDown(this.pauseKeys.escape)) {
       this.togglePause();
     }
+
+    this.updateObjectiveIndicator();
   }
 
   updateStats(stats) {
@@ -98,7 +103,9 @@ export class UIScene extends Phaser.Scene {
     this.levelBadge.setText(`Lv ${stats.level}`);
     this.infoText.setText(`${stats.difficultyLabel}\n${stats.time.toFixed(1)}s  金 ${stats.gold ?? 0}`);
     this.expBarFill.width = this.expBarWidth * expRatio;
+    this.currentGold = stats.gold ?? 0;
     this.isPaused = stats.isPaused ?? this.isPaused;
+    this.updateRefreshButtonState();
 
     if (stats.boss) {
       const bossRatio = Phaser.Math.Clamp(stats.boss.health / stats.boss.maxHealth, 0, 1);
@@ -157,14 +164,15 @@ export class UIScene extends Phaser.Scene {
     this.resumeButton.setPosition(gameSize.width / 2, gameSize.height / 2 + 52);
 
     this.levelUpBackdrop.setSize(gameSize.width, gameSize.height);
-    this.levelUpPanel.setSize(Math.min(gameSize.width - 32, 320), Math.min(gameSize.height - 48, 388)).setPosition(gameSize.width / 2, gameSize.height / 2);
-    this.levelUpTitle.setPosition(gameSize.width / 2, gameSize.height / 2 - 138);
-    this.levelUpTitle.setFontSize(isTallMobile ? '24px' : '28px');
+    this.levelUpPanel.setSize(Math.min(gameSize.width - 28, 324), Math.min(gameSize.height - 40, 510)).setPosition(gameSize.width / 2, gameSize.height / 2);
+    this.levelUpTitle.setPosition(gameSize.width / 2, gameSize.height / 2 - 188);
+    this.levelUpTitle.setFontSize(isTallMobile ? '23px' : '27px');
     this.optionButtons.forEach((button, index) => {
-      button.container.setPosition(gameSize.width / 2, gameSize.height / 2 - 52 + index * 92);
-      button.background.width = Math.min(gameSize.width - 52, 280);
-      button.background.height = 82;
+      button.container.setPosition(gameSize.width / 2, gameSize.height / 2 - 92 + index * 90);
+      button.background.width = Math.min(gameSize.width - 46, 286);
+      button.background.height = 80;
     });
+    this.refreshButton.setPosition(gameSize.width / 2, gameSize.height / 2 + 186);
 
     this.gameOverBackdrop.setSize(gameSize.width, gameSize.height);
     this.gameOverPanel.setSize(Math.min(gameSize.width - 34, 320), Math.min(gameSize.height - 80, 300)).setPosition(gameSize.width / 2, gameSize.height / 2);
@@ -339,34 +347,49 @@ export class UIScene extends Phaser.Scene {
 
   createLevelUpMenu() {
     this.levelUpBackdrop = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x02070d, 0.72).setOrigin(0).setScrollFactor(0).setVisible(false);
-    this.levelUpPanel = this.add.rectangle(this.scale.width / 2, this.scale.height / 2, 320, 388, 0x091824, 0.96).setStrokeStyle(3, 0x75f2b7, 0.45).setScrollFactor(0).setVisible(false);
-    this.levelUpTitle = this.add.text(this.scale.width / 2, this.scale.height / 2 - 138, 'Choose an Upgrade', {
+    this.levelUpPanel = this.add.rectangle(this.scale.width / 2, this.scale.height / 2, 324, 510, 0x091824, 0.96).setStrokeStyle(3, 0x75f2b7, 0.45).setScrollFactor(0).setVisible(false);
+    this.levelUpTitle = this.add.text(this.scale.width / 2, this.scale.height / 2 - 188, 'Choose an Upgrade', {
       fontFamily: 'Trebuchet MS',
       fontSize: '24px',
       color: '#f5e6a8'
     }).setOrigin(0.5).setScrollFactor(0).setVisible(false);
 
     this.optionButtons = [0, 1, 2].map((index) => this.createOptionButton(index));
+    this.createRefreshButton();
   }
 
   createOptionButton(index) {
-    const container = this.add.container(this.scale.width / 2, this.scale.height / 2 - 52 + index * 92);
+    const container = this.add.container(this.scale.width / 2, this.scale.height / 2 - 92 + index * 90);
     container.setScrollFactor(0).setVisible(false);
 
-    const background = this.add.rectangle(0, 0, 280, 82, 0x102839, 1).setStrokeStyle(2, 0x6dd3ff, 0.38).setInteractive({ useHandCursor: true });
-    const iconFrame = this.add.rectangle(-105, 0, 52, 52, 0x0c2130, 0.96).setStrokeStyle(2, 0x6dd3ff, 0.28).setVisible(false);
-    const icon = this.add.image(-105, 0, 'arc_bolt_icon').setVisible(false);
-    const title = this.add.text(-126, -22, '', {
+    const background = this.add.rectangle(0, 0, 286, 80, 0x102839, 1).setStrokeStyle(2, 0x6dd3ff, 0.38).setInteractive({ useHandCursor: true });
+    const iconFrame = this.add.rectangle(-104, 0, 50, 50, 0x0c2130, 0.96).setStrokeStyle(2, 0x6dd3ff, 0.28).setVisible(false);
+    const icon = this.add.image(-104, 0, 'arc_bolt_icon').setVisible(false);
+    const title = this.add.text(-124, -21, '', {
       fontFamily: 'Trebuchet MS',
-      fontSize: '18px',
+      fontSize: '17px',
       color: '#ffffff'
     }).setOrigin(0, 0.5);
-    const description = this.add.text(-126, 10, '', {
+    const starBackdrop = this.add.text(-124, -1, '', {
       fontFamily: 'Trebuchet MS',
       fontSize: '12px',
+      color: '#6d7d89',
+      stroke: '#132432',
+      strokeThickness: 2
+    }).setOrigin(0, 0.5);
+    const stars = this.add.text(-124, -1, '', {
+      fontFamily: 'Trebuchet MS',
+      fontSize: '12px',
+      color: '#f6d97a',
+      stroke: '#47320c',
+      strokeThickness: 2
+    }).setOrigin(0, 0.5);
+    const description = this.add.text(-124, 18, '', {
+      fontFamily: 'Trebuchet MS',
+      fontSize: '11px',
       color: '#b8cfdb',
-      wordWrap: { width: 220 },
-      lineSpacing: 3
+      wordWrap: { width: 218 },
+      lineSpacing: 2
     }).setOrigin(0, 0.5);
 
     background.on('pointerover', () => background.setFillStyle(0x15354a, 1));
@@ -380,10 +403,126 @@ export class UIScene extends Phaser.Scene {
       mainScene.applyUpgrade(background.upgradeId);
     });
 
-    container.add([background, iconFrame, icon, title, description]);
-    return { container, background, iconFrame, icon, title, description };
+    container.add([background, iconFrame, icon, title, starBackdrop, stars, description]);
+    return { container, background, iconFrame, icon, title, starBackdrop, stars, description };
+  }
+  createRefreshButton() {
+    const background = this.add.rectangle(0, 0, 236, 52, 0x17402c, 1).setStrokeStyle(2, 0x8ff0af, 0.42).setInteractive({ useHandCursor: true });
+    const label = this.add.text(0, -8, '刷新  -50G', {
+      fontFamily: 'Trebuchet MS',
+      fontSize: '18px',
+      color: '#ffffff'
+    }).setOrigin(0.5);
+    const detail = this.add.text(0, 12, '', {
+      fontFamily: 'Trebuchet MS',
+      fontSize: '11px',
+      color: '#cde8d8'
+    }).setOrigin(0.5);
+
+    background.on('pointerover', () => {
+      if (!background.disabled) {
+        background.setFillStyle(0x1b563a, 1);
+      }
+    });
+    background.on('pointerout', () => this.updateRefreshButtonState());
+    background.on('pointerdown', () => {
+      if (background.disabled) {
+        return;
+      }
+
+      const mainScene = this.scene.get('MainScene');
+      mainScene.refreshLevelUpChoices?.(this.levelUpRefreshCost);
+    });
+
+    this.refreshButton = this.add.container(this.scale.width / 2, this.scale.height / 2 + 186, [background, label, detail]);
+    this.refreshButton.setScrollFactor(0).setVisible(false);
+    this.refreshButtonBackground = background;
+    this.refreshButtonLabel = label;
+    this.refreshButtonDetail = detail;
   }
 
+  updateRefreshButtonState() {
+    if (!this.refreshButtonBackground || !this.refreshButtonLabel || !this.refreshButtonDetail) {
+      return;
+    }
+
+    const enabled = this.levelUpBackdrop?.visible && (this.currentGold ?? 0) >= this.levelUpRefreshCost;
+    this.refreshButtonBackground.disabled = !enabled;
+    this.refreshButtonBackground.setFillStyle(enabled ? 0x17402c : 0x2b2f33, 1);
+    this.refreshButtonBackground.setStrokeStyle(2, enabled ? 0x8ff0af : 0x6f7a82, enabled ? 0.42 : 0.3);
+    this.refreshButtonLabel.setAlpha(enabled ? 1 : 0.6);
+    this.refreshButtonDetail.setAlpha(enabled ? 0.92 : 0.6);
+    this.refreshButtonDetail.setText(enabled ? 'Spend gold to reroll all 3 choices' : 'Need 50 gold to reroll');
+  }
+
+  createObjectiveIndicator() {
+    this.objectiveIndicatorArrow = this.add.triangle(0, 0, -9, -8, 10, 0, -9, 8, 0xffd36c, 0.96).setScrollFactor(0).setVisible(false);
+    this.objectiveIndicatorDot = this.add.circle(0, 0, 3, 0xffffff, 0.9).setScrollFactor(0).setVisible(false);
+  }
+
+  updateObjectiveIndicator() {
+    if (!this.objectiveIndicatorArrow || this.levelUpBackdrop?.visible || this.gameOverBackdrop?.visible || this.isPaused) {
+      this.hideObjectiveIndicator();
+      return;
+    }
+
+    const mainScene = this.scene.get('MainScene');
+    const player = mainScene?.player;
+    const camera = mainScene?.cameras?.main;
+
+    if (!mainScene || !player?.active || !camera) {
+      this.hideObjectiveIndicator();
+      return;
+    }
+
+    let nearestTarget = null;
+    let nearestDistanceSq = Number.POSITIVE_INFINITY;
+    const checkTarget = (target, type) => {
+      if (!target?.active) {
+        return;
+      }
+
+      const dx = target.x - player.x;
+      const dy = target.y - player.y;
+      const distanceSq = dx * dx + dy * dy;
+
+      if (distanceSq < nearestDistanceSq) {
+        nearestDistanceSq = distanceSq;
+        nearestTarget = { target, type, dx, dy };
+      }
+    };
+
+    mainScene.rewardDrops?.children?.iterate((drop) => checkTarget(drop, 'drop'));
+    mainScene.chests?.children?.iterate((chest) => checkTarget(chest, 'chest'));
+
+    if (!nearestTarget) {
+      this.hideObjectiveIndicator();
+      return;
+    }
+
+    const worldView = camera.worldView;
+    if (worldView.contains(nearestTarget.target.x, nearestTarget.target.y) && nearestDistanceSq < 180 * 180) {
+      this.hideObjectiveIndicator();
+      return;
+    }
+
+    const playerScreenX = player.x - worldView.x;
+    const playerScreenY = player.y - worldView.y;
+    const angle = Math.atan2(nearestTarget.dy, nearestTarget.dx);
+    const radius = 42;
+    const indicatorX = playerScreenX + Math.cos(angle) * radius;
+    const indicatorY = playerScreenY + Math.sin(angle) * radius;
+    const pulse = 0.92 + Math.sin(this.time.now * 0.015) * 0.08;
+    const color = nearestTarget.type === 'drop' ? 0x7ce7ff : 0xffd36c;
+
+    this.objectiveIndicatorArrow.setPosition(indicatorX, indicatorY).setRotation(angle).setFillStyle(color, 0.96).setScale(pulse).setVisible(true);
+    this.objectiveIndicatorDot.setPosition(indicatorX - Math.cos(angle) * 11, indicatorY - Math.sin(angle) * 11).setFillStyle(color, 0.95).setVisible(true);
+  }
+
+  hideObjectiveIndicator() {
+    this.objectiveIndicatorArrow?.setVisible(false);
+    this.objectiveIndicatorDot?.setVisible(false);
+  }
   createBossWarning() {
     this.warningText = this.add.text(this.scale.width / 2, this.scale.height * 0.28, '', {
       fontFamily: 'Trebuchet MS',
@@ -448,44 +587,70 @@ export class UIScene extends Phaser.Scene {
 
   showLevelUpMenu(data) {
     this.setPauseState({ paused: false });
+    this.levelUpRefreshCost = data.refreshCost ?? this.levelUpRefreshCost;
     this.levelUpTitle.setText(`Level ${data.level} Reached`);
     this.levelUpBackdrop.setVisible(true);
     this.levelUpPanel.setVisible(true);
     this.levelUpTitle.setVisible(true);
+    this.refreshButton.setVisible(true);
+    this.updateRefreshButtonState();
 
     this.optionButtons.forEach((button, index) => {
       const choice = data.choices[index];
+
+      if (!choice) {
+        button.background.upgradeId = null;
+        button.icon.setVisible(false);
+        button.iconFrame.setVisible(false);
+        button.starBackdrop.setText('');
+        button.stars.setText('');
+        button.container.setVisible(false);
+        return;
+      }
+
       button.background.upgradeId = choice.id;
-      button.title.setText(choice.title);
+      button.title.setText(choice.displayTitle ?? choice.title);
+      const filledStars = Math.max(0, Math.min(choice.nextLevel ?? 1, choice.maxLevel ?? 1));
+      const maxStars = Math.max(choice.maxLevel ?? filledStars, filledStars);
+      button.starBackdrop.setText(String.fromCharCode(0x2606).repeat(maxStars));
+      button.stars.setText(String.fromCharCode(0x2605).repeat(filledStars));
       button.description.setText(choice.description);
+
       if (choice.iconKey && this.textures.exists(choice.iconKey)) {
         button.icon.setTexture(choice.iconKey);
-        button.icon.setDisplaySize(36, 36);
+        button.icon.setDisplaySize(34, 34);
         button.icon.setVisible(true);
         button.iconFrame.setVisible(true);
-        button.title.setPosition(-72, -22);
-        button.description.setPosition(-72, 10);
+        button.title.setPosition(-72, -21);
+        button.starBackdrop.setPosition(-72, -1);
+        button.stars.setPosition(-72, -1);
+        button.description.setPosition(-72, 18);
         button.description.setWordWrapWidth(166);
       } else {
         button.icon.setVisible(false);
         button.iconFrame.setVisible(false);
-        button.title.setPosition(-126, -22);
-        button.description.setPosition(-126, 10);
+        button.title.setPosition(-126, -21);
+        button.starBackdrop.setPosition(-126, -1);
+        button.stars.setPosition(-126, -1);
+        button.description.setPosition(-126, 18);
         button.description.setWordWrapWidth(220);
       }
+
       button.container.setVisible(true);
     });
   }
-
   hideLevelUpMenu() {
     this.levelUpBackdrop.setVisible(false);
     this.levelUpPanel.setVisible(false);
     this.levelUpTitle.setVisible(false);
+    this.refreshButton.setVisible(false);
 
     this.optionButtons.forEach((button) => {
       button.background.upgradeId = null;
       button.icon.setVisible(false);
       button.iconFrame.setVisible(false);
+      button.starBackdrop.setText('');
+      button.stars.setText('');
       button.container.setVisible(false);
     });
   }
@@ -520,6 +685,7 @@ export class UIScene extends Phaser.Scene {
     this.hideLevelUpMenu();
     this.setPauseState({ paused: false });
     this.releaseJoystick();
+    this.hideObjectiveIndicator();
     this.warningText.setVisible(false);
     this.gameOverTitle.setText('Game Over');
     this.gameOverBackdrop.setVisible(false);
@@ -527,7 +693,22 @@ export class UIScene extends Phaser.Scene {
     this.gameOverTitle.setVisible(false);
     this.gameOverStats.setVisible(false);
     this.restartButton.setVisible(false);
+    this.updateStats({
+      level: 1,
+      difficultyStage: 1,
+      difficultyLabel: 'Stage 1',
+      experience: 0,
+      experienceToNextLevel: 5,
+      health: 6,
+      maxHealth: 6,
+      time: 0,
+      gold: 0,
+      shield: 0,
+      isPaused: false,
+      boss: null
+    });
   }
 }
+
 
 

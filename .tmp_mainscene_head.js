@@ -2134,18 +2134,9 @@ export class MainScene extends Phaser.Scene {
     }
 
     if (projectile.explosionRadius > 0) {
-      const directHitKilled = this.damageEnemy(enemy, projectile.explosionDamage ?? projectile.damage);
-
-      if (!directHitKilled) {
-        this.applyProjectileStatus(enemy, projectile);
-      }
-
-      this.handleProjectileExplosion(projectile, enemy);
+      this.handleProjectileExplosion(projectile);
       projectile.disableBullet();
-
-      if (directHitKilled) {
-        this.emitStats(true);
-      }
+      this.emitStats(true);
       return;
     }
 
@@ -2245,14 +2236,14 @@ export class MainScene extends Phaser.Scene {
     enemy.applyChill?.(projectile.statusEffect, this.time.now);
   }
 
-  handleProjectileExplosion(projectile, ignoredTarget = null) {
+  handleProjectileExplosion(projectile) {
     const radiusSq = projectile.explosionRadius * projectile.explosionRadius;
     let targetDied = false;
 
     this.createExplosionEffect(projectile.x, projectile.y, projectile.explosionRadius, projectile.explosionTexture);
 
     const inspectTarget = (target) => {
-      if (!target?.active || target === ignoredTarget) {
+      if (!target?.active) {
         return;
       }
 
@@ -2902,13 +2893,9 @@ export class MainScene extends Phaser.Scene {
       choices: this.currentUpgradeChoices.map((choice) => ({
         id: choice.id,
         title: choice.title,
-        displayTitle: choice.displayTitle ?? choice.title,
         description: choice.description,
-        iconKey: choice.iconKey ?? null,
-        nextLevel: choice.nextLevel ?? 1,
-        maxLevel: choice.maxLevel ?? 1
-      })),
-      refreshCost: 50
+        iconKey: choice.iconKey ?? null
+      }))
     });
 
     this.emitStats(true);
@@ -2934,10 +2921,8 @@ export class MainScene extends Phaser.Scene {
           key: weaponKey,
           nextLevel: 1,
           title: def.name,
-          displayTitle: def.name,
           description: this.compactUpgradeDescription(this.describeWeaponLevel(weaponKey, 1, true)),
-          iconKey: def.iconKey ?? null,
-          maxLevel: def.maxLevel
+          iconKey: def.iconKey ?? null
         });
         return;
       }
@@ -2949,10 +2934,8 @@ export class MainScene extends Phaser.Scene {
           key: weaponKey,
           nextLevel: currentLevel + 1,
           title: `${def.name} 等級 ${currentLevel + 1}`,
-          displayTitle: def.name,
           description: this.compactUpgradeDescription(this.describeWeaponLevel(weaponKey, currentLevel + 1, false)),
-          iconKey: def.iconKey ?? null,
-          maxLevel: def.maxLevel
+          iconKey: def.iconKey ?? null
         });
       }
     });
@@ -2967,10 +2950,8 @@ export class MainScene extends Phaser.Scene {
           key: passiveKey,
           nextLevel: currentLevel + 1,
           title: `${def.name} 等級 ${currentLevel + 1}`,
-          displayTitle: def.name,
           description: this.compactUpgradeDescription(this.describePassiveLevel(passiveKey, currentLevel + 1), 28),
-          iconKey: def.iconKey ?? null,
-          maxLevel: def.maxLevel
+          iconKey: def.iconKey ?? null
         });
       }
     });
@@ -3074,30 +3055,6 @@ export class MainScene extends Phaser.Scene {
     }
 
     return `本級效果：最大生命 +${stats.maxHealthBonus}，回復 ${stats.healOnGain}。`;
-  }
-
-  refreshLevelUpChoices(cost = 50) {
-    if (!this.isLevelingUp || this.gold < cost) {
-      return false;
-    }
-
-    this.gold -= cost;
-    this.currentUpgradeChoices = this.getUpgradeChoices();
-    this.game.events.emit('level-up-opened', {
-      level: this.level,
-      choices: this.currentUpgradeChoices.map((choice) => ({
-        id: choice.id,
-        title: choice.title,
-        displayTitle: choice.displayTitle ?? choice.title,
-        description: choice.description,
-        iconKey: choice.iconKey ?? null,
-        nextLevel: choice.nextLevel ?? 1,
-        maxLevel: choice.maxLevel ?? 1
-      })),
-      refreshCost: cost
-    });
-    this.emitStats(true);
-    return true;
   }
 
   applyUpgrade(upgradeId) {
@@ -3245,6 +3202,7 @@ export class MainScene extends Phaser.Scene {
     });
   }
 }
+
 
 
 

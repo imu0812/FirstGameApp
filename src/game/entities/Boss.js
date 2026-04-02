@@ -9,16 +9,20 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
 
     this.poisonAura = scene.add.image(x, y, 'status_poison_ring');
     this.poisonAura.setVisible(false);
-    this.poisonAura.setDepth(this.depth - 1);
+    this.poisonAura.setBlendMode(Phaser.BlendModes.ADD);
     this.burnAura = scene.add.image(x, y, 'status_burn_ring');
     this.burnAura.setVisible(false);
-    this.burnAura.setDepth(this.depth - 1);
+    this.burnAura.setBlendMode(Phaser.BlendModes.ADD);
     this.poisonStatusIcon = scene.add.image(x, y, 'status_poison_icon');
     this.poisonStatusIcon.setVisible(false);
-    this.poisonStatusIcon.setDepth(this.depth + 1);
+    this.poisonStatusIcon.setBlendMode(Phaser.BlendModes.SCREEN);
     this.burnStatusIcon = scene.add.image(x, y, 'status_burn_icon');
     this.burnStatusIcon.setVisible(false);
-    this.burnStatusIcon.setDepth(this.depth + 1);
+    this.burnStatusIcon.setBlendMode(Phaser.BlendModes.SCREEN);
+    this.poisonAura.setDepth(2.7);
+    this.burnAura.setDepth(2.7);
+    this.poisonStatusIcon.setDepth(4.8);
+    this.burnStatusIcon.setDepth(4.8);
 
     this.isBoss = true;
     this.body.setAllowGravity(false);
@@ -90,13 +94,13 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     this.setVelocity(0, 0);
     this.setTint(this.baseTint);
     this.setScale(config.scale ?? 1);
-    this.poisonAura.setScale(Math.max(1.08, (config.scale ?? 1) * 1.02));
+    this.poisonAura.setScale(Math.max(1.22, (config.scale ?? 1) * 1.12));
     this.poisonAura.setVisible(false);
-    this.burnAura.setScale(Math.max(1.08, (config.scale ?? 1) * 1.02));
+    this.burnAura.setScale(Math.max(1.22, (config.scale ?? 1) * 1.1));
     this.burnAura.setVisible(false);
-    this.poisonStatusIcon.setScale(Math.max(0.88, (config.scale ?? 1) * 0.62));
+    this.poisonStatusIcon.setScale(Math.max(1.04, (config.scale ?? 1) * 0.76));
     this.poisonStatusIcon.setVisible(false);
-    this.burnStatusIcon.setScale(Math.max(0.88, (config.scale ?? 1) * 0.62));
+    this.burnStatusIcon.setScale(Math.max(1.04, (config.scale ?? 1) * 0.76));
     this.burnStatusIcon.setVisible(false);
     this.updateHitbox();
     this.shockwaveRadius = config.shockwaveRadius ?? Math.round(this.displayWidth * 0.75);
@@ -198,8 +202,8 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
   updateStatusVisuals(time = this.scene.time.now) {
     const poisonActive = time < this.poisonUntil;
     const burnActive = time < this.burnUntil;
-    const baseScale = Math.max(0.88, this.scaleX * 0.62);
-    const iconY = this.y - Math.max(28, this.displayHeight * 0.68);
+    const baseScale = Math.max(1.04, this.scaleX * 0.76);
+    const iconY = this.y - Math.max(34, this.displayHeight * 0.8);
 
     this.poisonAura.setVisible(poisonActive);
     this.burnAura.setVisible(burnActive);
@@ -223,11 +227,11 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     }
 
     if (poisonActive) {
-      const poisonPulse = 0.92 + Math.sin(time * 0.013) * 0.08;
-      this.poisonAura.setAlpha(0.22 + Math.sin(time * 0.009) * 0.08);
+      const poisonPulse = 0.98 + Math.sin(time * 0.013) * 0.1;
+      this.poisonAura.setAlpha(0.44 + Math.sin(time * 0.009) * 0.12);
       this.poisonAura.setRotation(time * 0.0011);
-      this.poisonAura.setScale(Math.max(1.08, this.scaleX * 1.02) * (0.98 + Math.sin(time * 0.01) * 0.04));
-      this.poisonStatusIcon.setAlpha(0.84 + Math.sin(time * 0.013) * 0.16);
+      this.poisonAura.setScale(Math.max(1.22, this.scaleX * 1.12) * (1 + Math.sin(time * 0.01) * 0.06));
+      this.poisonStatusIcon.setAlpha(0.96 + Math.sin(time * 0.013) * 0.04);
       this.poisonStatusIcon.setScale(baseScale * poisonPulse);
     }
 

@@ -1,4 +1,4 @@
-﻿export const ENEMY_TYPES = {
+export const ENEMY_TYPES = {
   normal: {
     key: 'normal',
     name: 'Wisp Drifter',
@@ -123,7 +123,7 @@ export const BOSS_PHASES = [
     contactDamage: 2,
     tint: 0x6dd3ff,
     scale: 2.5,
-    hitboxRadiusFactor: 0.275,
+    hitboxRadiusFactor: 0.42,
     dashSpeed: 350,
     dashChargeDuration: 620,
     dashDuration: 700,
@@ -155,7 +155,7 @@ export const BOSS_PHASES = [
     contactDamage: 2,
     tint: 0x82ddff,
     scale: 3.12,
-    hitboxRadiusFactor: 0.268,
+    hitboxRadiusFactor: 0.42,
     dashSpeed: 520,
     dashChargeDuration: 470,
     dashDuration: 760,
@@ -188,7 +188,7 @@ export const BOSS_PHASES = [
     contactDamage: 3,
     tint: 0x9ae5ff,
     scale: 3.12,
-    hitboxRadiusFactor: 0.268,
+    hitboxRadiusFactor: 0.42,
     dashSpeed: 540,
     dashChargeDuration: 450,
     dashDuration: 760,

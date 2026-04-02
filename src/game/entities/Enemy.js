@@ -10,19 +10,28 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.freezeOutline = scene.add.image(x, y, 'ice_shell');
     this.freezeOutline.setVisible(false);
     this.freezeOutline.setAlpha(0.92);
-    this.freezeOutline.setDepth(this.depth - 1);
+    this.freezeOutline.setBlendMode(Phaser.BlendModes.SCREEN);
     this.poisonAura = scene.add.image(x, y, 'status_poison_ring');
     this.poisonAura.setVisible(false);
-    this.poisonAura.setDepth(this.depth - 1);
+    this.poisonAura.setBlendMode(Phaser.BlendModes.ADD);
     this.burnAura = scene.add.image(x, y, 'status_burn_ring');
     this.burnAura.setVisible(false);
-    this.burnAura.setDepth(this.depth - 1);
+    this.burnAura.setBlendMode(Phaser.BlendModes.ADD);
     this.poisonStatusIcon = scene.add.image(x, y, 'status_poison_icon');
     this.poisonStatusIcon.setVisible(false);
-    this.poisonStatusIcon.setDepth(this.depth + 1);
+    this.poisonStatusIcon.setBlendMode(Phaser.BlendModes.SCREEN);
     this.burnStatusIcon = scene.add.image(x, y, 'status_burn_icon');
     this.burnStatusIcon.setVisible(false);
-    this.burnStatusIcon.setDepth(this.depth + 1);
+    this.burnStatusIcon.setBlendMode(Phaser.BlendModes.SCREEN);
+    this.rootBindVisual = scene.add.image(x, y, 'vine_turret_root_bind');
+    this.rootBindVisual.setVisible(false);
+    this.rootBindVisual.setBlendMode(Phaser.BlendModes.SCREEN);
+    this.freezeOutline.setDepth(2.6);
+    this.poisonAura.setDepth(2.7);
+    this.burnAura.setDepth(2.7);
+    this.rootBindVisual.setDepth(2.85);
+    this.poisonStatusIcon.setDepth(4.6);
+    this.burnStatusIcon.setDepth(4.6);
 
     this.body.setAllowGravity(false);
 
@@ -85,13 +94,15 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.freezeOutline.setPosition(x, y);
     this.freezeOutline.setScale((config.scale ?? 1) * 1.22);
     this.freezeOutline.setVisible(false);
-    this.poisonAura.setScale(Math.max(0.92, (config.scale ?? 1) * 1.08));
+    this.poisonAura.setScale(Math.max(1.08, (config.scale ?? 1) * 1.26));
     this.poisonAura.setVisible(false);
-    this.burnAura.setScale(Math.max(0.92, (config.scale ?? 1) * 1.08));
+    this.burnAura.setScale(Math.max(1.08, (config.scale ?? 1) * 1.24));
     this.burnAura.setVisible(false);
-    this.poisonStatusIcon.setScale(Math.max(0.78, (config.scale ?? 1) * 0.72));
+    this.rootBindVisual.setScale(Math.max(0.98, (config.scale ?? 1) * 1.08));
+    this.rootBindVisual.setVisible(false);
+    this.poisonStatusIcon.setScale(Math.max(0.94, (config.scale ?? 1) * 0.9));
     this.poisonStatusIcon.setVisible(false);
-    this.burnStatusIcon.setScale(Math.max(0.78, (config.scale ?? 1) * 0.72));
+    this.burnStatusIcon.setScale(Math.max(0.94, (config.scale ?? 1) * 0.9));
     this.burnStatusIcon.setVisible(false);
 
     return this;
@@ -108,6 +119,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       this.freezeOutline.setVisible(false);
       this.poisonAura.setVisible(false);
       this.burnAura.setVisible(false);
+      this.rootBindVisual.setVisible(false);
       this.poisonStatusIcon.setVisible(false);
       this.burnStatusIcon.setVisible(false);
       return;
@@ -180,20 +192,23 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   updateStatusVisuals(time = this.scene.time.now) {
     const poisonActive = time < this.poisonUntil;
     const burnActive = time < this.burnUntil;
-    const baseScale = Math.max(0.78, this.scaleX * 0.72);
-    const iconY = this.y - Math.max(20, this.displayHeight * 0.68);
+    const rootActive = time < this.rootUntil;
+    const baseScale = Math.max(0.94, this.scaleX * 0.9);
+    const iconY = this.y - Math.max(24, this.displayHeight * 0.82);
 
     this.poisonAura.setVisible(poisonActive);
     this.burnAura.setVisible(burnActive);
+    this.rootBindVisual.setVisible(rootActive);
     this.poisonStatusIcon.setVisible(poisonActive);
     this.burnStatusIcon.setVisible(burnActive);
 
-    if (!poisonActive && !burnActive) {
+    if (!poisonActive && !burnActive && !rootActive) {
       return;
     }
 
     this.poisonAura.setPosition(this.x, this.y);
     this.burnAura.setPosition(this.x, this.y);
+    this.rootBindVisual.setPosition(this.x, this.y + Math.max(6, this.displayHeight * 0.08));
 
     if (poisonActive && burnActive) {
       this.poisonStatusIcon.setPosition(this.x - 9, iconY);
@@ -205,11 +220,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     if (poisonActive) {
-      const poisonPulse = 0.92 + Math.sin(time * 0.013) * 0.08;
-      this.poisonAura.setAlpha(0.24 + Math.sin(time * 0.009) * 0.08);
+      const poisonPulse = 0.98 + Math.sin(time * 0.013) * 0.1;
+      this.poisonAura.setAlpha(0.48 + Math.sin(time * 0.009) * 0.12);
       this.poisonAura.setRotation(time * 0.0012);
-      this.poisonAura.setScale(Math.max(0.92, this.scaleX * 1.08) * (0.98 + Math.sin(time * 0.01) * 0.04));
-      this.poisonStatusIcon.setAlpha(0.84 + Math.sin(time * 0.013) * 0.16);
+      this.poisonAura.setScale(Math.max(1.08, this.scaleX * 1.26) * (1 + Math.sin(time * 0.01) * 0.06));
+      this.poisonStatusIcon.setAlpha(0.96 + Math.sin(time * 0.013) * 0.04);
       this.poisonStatusIcon.setScale(baseScale * poisonPulse);
     }
 
@@ -220,6 +235,13 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       this.burnAura.setScale(Math.max(0.92, this.scaleX * 1.08) * (1 + Math.sin(time * 0.017 + 0.4) * 0.05));
       this.burnStatusIcon.setAlpha(0.88 + Math.sin(time * 0.02 + 0.7) * 0.12);
       this.burnStatusIcon.setScale(baseScale * burnPulse);
+    }
+
+    if (rootActive) {
+      const bindPulse = 0.96 + Math.sin(time * 0.018 + 1.1) * 0.05;
+      this.rootBindVisual.setAlpha(0.72 + Math.sin(time * 0.014) * 0.12);
+      this.rootBindVisual.setRotation(Math.sin(time * 0.003) * 0.04);
+      this.rootBindVisual.setScale(Math.max(0.9, this.scaleX * 1.04) * bindPulse);
     }
   }
 
@@ -406,6 +428,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.freezeOutline.setVisible(false);
     this.poisonAura.setVisible(false);
     this.burnAura.setVisible(false);
+    this.rootBindVisual.setVisible(false);
     this.poisonStatusIcon.setVisible(false);
     this.burnStatusIcon.setVisible(false);
   }
@@ -414,6 +437,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.freezeOutline?.destroy();
     this.poisonAura?.destroy();
     this.burnAura?.destroy();
+    this.rootBindVisual?.destroy();
     this.poisonStatusIcon?.destroy();
     this.burnStatusIcon?.destroy();
     super.destroy(fromScene);
