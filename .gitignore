@@ -1,0 +1,5 @@
+tools/
+
+# Optional local archives or exports
+*.zip
+dist/

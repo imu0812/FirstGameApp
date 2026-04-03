@@ -30,6 +30,32 @@ import passiveProjectileCountIcon from '../../assets/passive_projectile_count.sv
 import passiveDamageBoostIcon from '../../assets/passive_damage_boost.svg';
 import passiveAttackFrequencyIcon from '../../assets/passive_attack_frequency.svg';
 import rewardMagnetImage from '../../assets/reward_magnet.png';
+import arcBoltCastAudioOgg from '../../assets/audio/arc_bolt_cast.ogg';
+import arcBoltCastAudioMp3 from '../../assets/audio/arc_bolt_cast.mp3';
+import arcBoltHitAudioOgg from '../../assets/audio/arc_bolt_hit.ogg';
+import arcBoltHitAudioMp3 from '../../assets/audio/arc_bolt_hit.mp3';
+import chainThunderCastAudioOgg from '../../assets/audio/chain_thunder_cast.ogg';
+import chainThunderCastAudioMp3 from '../../assets/audio/chain_thunder_cast.mp3';
+import cometLanceCastAudioOgg from '../../assets/audio/comet_lance_cast.ogg';
+import cometLanceCastAudioMp3 from '../../assets/audio/comet_lance_cast.mp3';
+import cometLanceHitAudioOgg from '../../assets/audio/comet_lance_hit.ogg';
+import cometLanceHitAudioMp3 from '../../assets/audio/comet_lance_hit.mp3';
+import flameOrbCastAudioOgg from '../../assets/audio/flame_orb_cast.ogg';
+import flameOrbCastAudioMp3 from '../../assets/audio/flame_orb_cast.mp3';
+import flameOrbExplodeAudioOgg from '../../assets/audio/flame_orb_explode.ogg';
+import flameOrbExplodeAudioMp3 from '../../assets/audio/flame_orb_explode.mp3';
+import galeBoomerangReturnHitAudioOgg from '../../assets/audio/gale_boomerang_return_hit.ogg';
+import galeBoomerangReturnHitAudioMp3 from '../../assets/audio/gale_boomerang_return_hit.mp3';
+import galeBoomerangThrowAudioOgg from '../../assets/audio/gale_boomerang_throw.ogg';
+import galeBoomerangThrowAudioMp3 from '../../assets/audio/gale_boomerang_throw.mp3';
+import haloDiscHitAudioOgg from '../../assets/audio/halo_disc_hit.ogg';
+import haloDiscHitAudioMp3 from '../../assets/audio/halo_disc_hit.mp3';
+import novaBloomExplodeAudioOgg from '../../assets/audio/nova_bloom_explode.ogg';
+import novaBloomExplodeAudioMp3 from '../../assets/audio/nova_bloom_explode.mp3';
+import novaBloomThrowAudioOgg from '../../assets/audio/nova_bloom_throw.ogg';
+import novaBloomThrowAudioMp3 from '../../assets/audio/nova_bloom_throw.mp3';
+import vineTurretFireAudioOgg from '../../assets/audio/vine_turret_fire.ogg';
+import vineTurretFireAudioMp3 from '../../assets/audio/vine_turret_fire.mp3';
 export class BootScene extends Phaser.Scene {
   constructor() {
     super('BootScene');
@@ -68,6 +94,19 @@ export class BootScene extends Phaser.Scene {
     this.load.image('passive_pickup_radius', passivePickupRadiusIcon);
     this.load.image('passive_max_health', passiveMaxHealthIcon);
     this.load.image('reward_magnet', rewardMagnetImage);
+    this.load.audio('arc_bolt_cast_sfx', [arcBoltCastAudioOgg, arcBoltCastAudioMp3]);
+    this.load.audio('arc_bolt_hit_sfx', [arcBoltHitAudioOgg, arcBoltHitAudioMp3]);
+    this.load.audio('chain_thunder_cast_sfx', [chainThunderCastAudioOgg, chainThunderCastAudioMp3]);
+    this.load.audio('comet_lance_cast_sfx', [cometLanceCastAudioOgg, cometLanceCastAudioMp3]);
+    this.load.audio('comet_lance_hit_sfx', [cometLanceHitAudioOgg, cometLanceHitAudioMp3]);
+    this.load.audio('flame_orb_cast_sfx', [flameOrbCastAudioOgg, flameOrbCastAudioMp3]);
+    this.load.audio('flame_orb_explode_sfx', [flameOrbExplodeAudioOgg, flameOrbExplodeAudioMp3]);
+    this.load.audio('gale_boomerang_throw_sfx', [galeBoomerangThrowAudioOgg, galeBoomerangThrowAudioMp3]);
+    this.load.audio('gale_boomerang_return_hit_sfx', [galeBoomerangReturnHitAudioOgg, galeBoomerangReturnHitAudioMp3]);
+    this.load.audio('halo_disc_hit_sfx', [haloDiscHitAudioOgg, haloDiscHitAudioMp3]);
+    this.load.audio('nova_bloom_throw_sfx', [novaBloomThrowAudioOgg, novaBloomThrowAudioMp3]);
+    this.load.audio('nova_bloom_explode_sfx', [novaBloomExplodeAudioOgg, novaBloomExplodeAudioMp3]);
+    this.load.audio('vine_turret_fire_sfx', [vineTurretFireAudioOgg, vineTurretFireAudioMp3]);
   }
 
   create() {

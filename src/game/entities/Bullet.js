@@ -14,6 +14,10 @@ export class Bullet extends Phaser.Physics.Arcade.Sprite {
     this.chainConfig = null;
     this.boomerangConfig = null;
     this.statusEffect = null;
+    this.sourceWeaponKey = null;
+    this.hitSoundKey = null;
+    this.explosionSoundKey = null;
+    this.returnHitSoundKey = null;
     this.outboundHitTargets = new Set();
     this.returnHitTargets = new Set();
     this.isReturning = false;
@@ -47,6 +51,10 @@ export class Bullet extends Phaser.Physics.Arcade.Sprite {
     this.chainConfig = config.chainConfig ?? null;
     this.boomerangConfig = config.boomerangConfig ?? null;
     this.statusEffect = config.statusEffect ?? null;
+    this.sourceWeaponKey = config.sourceWeaponKey ?? null;
+    this.hitSoundKey = config.hitSoundKey ?? null;
+    this.explosionSoundKey = config.explosionSoundKey ?? null;
+    this.returnHitSoundKey = config.returnHitSoundKey ?? null;
     this.outboundHitTargets.clear();
     this.returnHitTargets.clear();
     this.isReturning = false;
@@ -149,6 +157,10 @@ export class Bullet extends Phaser.Physics.Arcade.Sprite {
     this.outboundHitTargets.clear();
     this.returnHitTargets.clear();
     this.statusEffect = null;
+    this.sourceWeaponKey = null;
+    this.hitSoundKey = null;
+    this.explosionSoundKey = null;
+    this.returnHitSoundKey = null;
     this.chainConfig = null;
     this.boomerangConfig = null;
     this.explosionTexture = null;

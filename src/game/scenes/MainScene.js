@@ -38,6 +38,22 @@ const PASSIVE_ROLE_SUMMARIES = {
   max_health: { functionText: '定位:提高容錯', suitability: '適性:新手/長局/Boss戰' }
 };
 
+const SKILL_AUDIO_CONFIG = {
+  arc_bolt_cast_sfx: { volume: 0.18, minInterval: 70 },
+  arc_bolt_hit_sfx: { volume: 0.16, minInterval: 45 },
+  chain_thunder_cast_sfx: { volume: 0.2, minInterval: 120 },
+  comet_lance_cast_sfx: { volume: 0.18, minInterval: 120 },
+  comet_lance_hit_sfx: { volume: 0.16, minInterval: 55 },
+  flame_orb_cast_sfx: { volume: 0.2, minInterval: 120 },
+  flame_orb_explode_sfx: { volume: 0.2, minInterval: 85 },
+  gale_boomerang_throw_sfx: { volume: 0.18, minInterval: 100 },
+  gale_boomerang_return_hit_sfx: { volume: 0.15, minInterval: 65 },
+  halo_disc_hit_sfx: { volume: 0.12, minInterval: 90 },
+  nova_bloom_throw_sfx: { volume: 0.18, minInterval: 140 },
+  nova_bloom_explode_sfx: { volume: 0.2, minInterval: 90 },
+  vine_turret_fire_sfx: { volume: 0.16, minInterval: 90 }
+};
+
 export class MainScene extends Phaser.Scene {
   constructor() {
     super('MainScene');
@@ -68,6 +84,7 @@ export class MainScene extends Phaser.Scene {
     this.statsEmitInterval = 100;
     this.currentUpgradeChoices = [];
     this.weaponTimers = {};
+    this.lastSkillAudioAt = {};
     this.ownedWeapons = {
       arc_bolt: 1
     };
@@ -1308,9 +1325,12 @@ export class MainScene extends Phaser.Scene {
     if (!target) {
       return;
     }
+    this.playSkillAudio('arc_bolt_cast_sfx');
     const baseAngle = Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y);
     this.spawnProjectileSpread({
       ...stats,
+      sourceWeaponKey: 'arc_bolt',
+      hitSoundKey: 'arc_bolt_hit_sfx',
       texture: definition.projectileKey ?? 'bullet',
       scale: (stats.scale ?? 1) * 1.2,
       bodyRadius: 6,
@@ -1326,9 +1346,12 @@ export class MainScene extends Phaser.Scene {
     if (!target) {
       return;
     }
+    this.playSkillAudio('comet_lance_cast_sfx');
     const baseAngle = Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y);
     this.spawnProjectileSpread({
       ...stats,
+      sourceWeaponKey: 'comet_lance',
+      hitSoundKey: 'comet_lance_hit_sfx',
       texture: definition.projectileKey ?? 'lance',
       scale: (stats.scale ?? 1) * 1.2,
       bodyRadius: 8,
@@ -1348,9 +1371,12 @@ export class MainScene extends Phaser.Scene {
     if (!target) {
       return;
     }
+    this.playSkillAudio('nova_bloom_throw_sfx');
     const baseAngle = Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y);
     this.spawnProjectileSpread({
       ...stats,
+      sourceWeaponKey: 'nova_bloom',
+      explosionSoundKey: 'nova_bloom_explode_sfx',
       texture: definition.projectileKey ?? 'bomb',
       bodyRadius: 10,
       explosionRadius: stats.radius,
@@ -1391,6 +1417,7 @@ export class MainScene extends Phaser.Scene {
     if (primaryTargets.length === 0) {
       return;
     }
+    this.playSkillAudio('chain_thunder_cast_sfx');
 
     let targetDied = false;
     primaryTargets.forEach((target) => {
@@ -1410,10 +1437,13 @@ export class MainScene extends Phaser.Scene {
     if (!target) {
       return;
     }
+    this.playSkillAudio('gale_boomerang_throw_sfx');
 
     const baseAngle = Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y);
     this.spawnProjectileSpread({
       ...stats,
+      sourceWeaponKey: 'gale_boomerang',
+      returnHitSoundKey: 'gale_boomerang_return_hit_sfx',
       texture: definition.projectileKey ?? 'gale_boomerang_projectile',
       scale: stats.scale ?? 1.08,
       bodyRadius: 11,
@@ -1544,6 +1574,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   fireVineTurretProjectile(turret, target) {
+    this.playSkillAudio('vine_turret_fire_sfx');
     const angle = Phaser.Math.Angle.Between(turret.x, turret.y, target.x, target.y);
     this.spawnProjectile({
       x: turret.x,
@@ -1561,6 +1592,7 @@ export class MainScene extends Phaser.Scene {
       explosionDamage: turret.explosionDamage ?? turret.projectileDamage,
       explosionTexture: turret.explosionTexture ?? null,
       explodeOnExpire: false,
+      sourceWeaponKey: 'vine_turret',
       statusEffect: turret.statusEffect,
       rotationOffset: 0
     });
@@ -1624,10 +1656,13 @@ export class MainScene extends Phaser.Scene {
     if (!target) {
       return;
     }
+    this.playSkillAudio('flame_orb_cast_sfx');
 
     const baseAngle = Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y);
     this.spawnProjectileSpread({
       ...stats,
+      sourceWeaponKey: 'flame_orb',
+      explosionSoundKey: 'flame_orb_explode_sfx',
       texture: definition.projectileKey ?? 'bullet',
       bodyRadius: 10,
       explosionRadius: stats.radius,
@@ -1686,6 +1721,51 @@ export class MainScene extends Phaser.Scene {
     }
 
     projectile.fire(config);
+  }
+
+  playSkillAudio(audioKey, overrides = {}) {
+    if (!audioKey || !this.sound?.get(audioKey) && !this.cache.audio.exists(audioKey)) {
+      return;
+    }
+
+    const baseConfig = SKILL_AUDIO_CONFIG[audioKey] ?? {};
+    const now = this.time.now;
+    const minInterval = overrides.minInterval ?? baseConfig.minInterval ?? 0;
+    const lastPlayedAt = this.lastSkillAudioAt[audioKey] ?? -Infinity;
+
+    if (now - lastPlayedAt < minInterval) {
+      return;
+    }
+
+    this.lastSkillAudioAt[audioKey] = now;
+    this.sound.play(audioKey, {
+      volume: overrides.volume ?? baseConfig.volume ?? 0.18,
+      rate: overrides.rate ?? 1,
+      detune: overrides.detune ?? 0
+    });
+  }
+
+  playProjectileHitAudio(projectile) {
+    if (!projectile?.active) {
+      return;
+    }
+
+    if (projectile.boomerangConfig && projectile.isReturning && projectile.returnHitSoundKey) {
+      this.playSkillAudio(projectile.returnHitSoundKey);
+      return;
+    }
+
+    if (projectile.hitSoundKey) {
+      this.playSkillAudio(projectile.hitSoundKey);
+    }
+  }
+
+  playProjectileExplosionAudio(projectile) {
+    if (!projectile?.explosionSoundKey) {
+      return;
+    }
+
+    this.playSkillAudio(projectile.explosionSoundKey);
   }
 
   syncOrbitBlades() {
@@ -2154,6 +2234,7 @@ export class MainScene extends Phaser.Scene {
     }
 
     if (projectile.explosionRadius > 0) {
+      this.playProjectileHitAudio(projectile);
       const directHitKilled = this.damageEnemy(enemy, projectile.explosionDamage ?? projectile.damage);
 
       if (!directHitKilled) {
@@ -2180,6 +2261,7 @@ export class MainScene extends Phaser.Scene {
       return;
     }
 
+    this.playProjectileHitAudio(projectile);
     const enemyDied = this.damageEnemy(enemy, projectile.damage);
 
     if (!enemyDied) {
@@ -2269,6 +2351,7 @@ export class MainScene extends Phaser.Scene {
     const radiusSq = projectile.explosionRadius * projectile.explosionRadius;
     let targetDied = false;
 
+    this.playProjectileExplosionAudio(projectile);
     this.createExplosionEffect(projectile.x, projectile.y, projectile.explosionRadius, projectile.explosionTexture);
 
     const inspectTarget = (target) => {
@@ -2464,6 +2547,7 @@ export class MainScene extends Phaser.Scene {
       return;
     }
 
+    this.playSkillAudio('halo_disc_hit_sfx');
     const enemyDied = this.damageEnemy(enemy, blade.damage);
 
     if (enemyDied) {
