@@ -1,5 +1,13 @@
-tools/
-
-# Optional local archives or exports
-*.zip
+node_modules/
 dist/
+tools/
+exports/
+
+# Local archives and temporary files
+*.zip
+*.tmp
+*.log
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
