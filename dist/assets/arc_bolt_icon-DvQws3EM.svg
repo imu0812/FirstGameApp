@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGlowArc" x1="96" y1="96" x2="416" y2="416" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#2C1D56"/>
+      <stop offset="45%" stop-color="#171230"/>
+      <stop offset="100%" stop-color="#0B0914"/>
+    </linearGradient>
+
+    <radialGradient id="coreArc" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse"
+      gradientTransform="translate(260 248) rotate(90) scale(156 156)">
+      <stop offset="0%" stop-color="#FFFBE7"/>
+      <stop offset="32%" stop-color="#FFF1AF"/>
+      <stop offset="68%" stop-color="#FFD874"/>
+      <stop offset="100%" stop-color="#F3A93A"/>
+    </radialGradient>
+
+    <linearGradient id="shaftArc" x1="122" y1="323" x2="344" y2="173" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F1A631"/>
+      <stop offset="30%" stop-color="#FFD66E"/>
+      <stop offset="60%" stop-color="#FFF5B8"/>
+      <stop offset="100%" stop-color="#FFE082"/>
+    </linearGradient>
+
+    <linearGradient id="trailArc" x1="86" y1="355" x2="226" y2="247" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFB73A" stop-opacity="0"/>
+      <stop offset="45%" stop-color="#FFC650" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#FFF4BF" stop-opacity="0.9"/>
+    </linearGradient>
+
+    <filter id="softGlowArc" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="bigGlowArc" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="18" result="blur"/>
+      <feColorMatrix in="blur" type="matrix"
+        values="1 0 0 0 0
+                0 0.85 0 0 0
+                0 0 0.45 0 0
+                0 0 0 0.95 0"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="sparkArc" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="3"/>
+    </filter>
+  </defs>
+
+  <!-- background -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGlowArc)"/>
+
+  <!-- tracking rune circle -->
+  <g opacity="0.95" filter="url(#softGlowArc)">
+    <circle cx="262" cy="248" r="122" stroke="#8E63FF" stroke-opacity="0.24" stroke-width="8"/>
+    <circle cx="262" cy="248" r="92" stroke="#C79CFF" stroke-opacity="0.18" stroke-width="5" stroke-dasharray="10 16"/>
+    <path d="M190 143 L204 126 L220 143 L206 159 Z" fill="#C89EFF" fill-opacity="0.78"/>
+    <path d="M322 142 L338 128 L350 145 L334 159 Z" fill="#D3B2FF" fill-opacity="0.62"/>
+    <path d="M355 258 L373 248 L375 268 L357 277 Z" fill="#C89EFF" fill-opacity="0.58"/>
+    <path d="M173 261 L160 247 L177 239 L190 253 Z" fill="#E0C1FF" fill-opacity="0.52"/>
+    <path d="M218 352 L232 337 L246 353 L232 368 Z" fill="#C89EFF" fill-opacity="0.70"/>
+  </g>
+
+  <!-- homing arc -->
+  <path d="M124 337
+           C130 302, 154 276, 186 260
+           C220 243, 255 236, 282 225
+           C302 217, 320 201, 334 180"
+        stroke="url(#trailArc)" stroke-width="24" stroke-linecap="round" filter="url(#bigGlowArc)"/>
+
+  <path d="M114 350
+           C134 304, 160 279, 200 260
+           C238 242, 271 239, 299 225
+           C326 212, 345 188, 355 156"
+        stroke="#B77BFF" stroke-opacity="0.35" stroke-width="6" stroke-linecap="round" stroke-dasharray="4 18"/>
+
+  <!-- projectile tail fins -->
+  <g transform="translate(246 250) rotate(-33)">
+    <path d="M-112 14 L-42 -18 L-26 -2 L-93 30 Z" fill="#D38C2C" opacity="0.92"/>
+    <path d="M-120 0 L-54 -28 L-30 -2 L-99 22 Z" fill="#A46225" opacity="0.70"/>
+    <path d="M-116 26 L-60 4 L-36 28 L-90 46 Z" fill="#F6C85D" opacity="0.62"/>
+  </g>
+
+  <!-- main arc bolt -->
+  <g transform="translate(262 244) rotate(-33)" filter="url(#bigGlowArc)">
+    <path d="M-22 -18
+             C18 -42, 78 -56, 135 -52
+             L172 -10
+             L78 12
+             L26 14
+             Z" fill="url(#shaftArc)"/>
+
+    <path d="M165 -44
+             L226 0
+             L167 43
+             C155 30, 143 18, 122 12
+             C142 3, 154 -6, 165 -44 Z"
+          fill="url(#coreArc)"/>
+
+    <path d="M103 -36
+             C120 -20, 132 -8, 145 0
+             C132 8, 118 19, 103 34
+             C82 27, 62 18, 41 0
+             C61 -17, 82 -28, 103 -36 Z"
+          fill="#FFF8D8" fill-opacity="0.72"/>
+
+    <path d="M-25 -19
+             C-3 -6, 10 2, 26 14
+             C-7 9, -30 7, -56 7
+             L-78 0
+             L-56 -8
+             C-43 -10, -35 -13, -25 -19 Z"
+          fill="#FFE9A6" fill-opacity="0.72"/>
+  </g>
+
+  <!-- head spark -->
+  <g filter="url(#softGlowArc)">
+    <circle cx="406" cy="154" r="18" fill="#FFF6C4" fill-opacity="0.95"/>
+    <path d="M406 122 L413 146 L437 154 L413 161 L406 185 L399 161 L375 154 L399 146 Z"
+          fill="#FFF0A0"/>
+  </g>
+
+  <!-- spark particles -->
+  <g fill="#FFF4BF" filter="url(#sparkArc)">
+    <circle cx="132" cy="344" r="4"/>
+    <circle cx="168" cy="308" r="3"/>
+    <circle cx="208" cy="280" r="3.5"/>
+    <circle cx="326" cy="199" r="3"/>
+    <circle cx="368" cy="172" r="4"/>
+    <circle cx="388" cy="161" r="2.5"/>
+  </g>
+</svg>

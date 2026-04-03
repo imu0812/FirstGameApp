@@ -18,6 +18,26 @@ import {
 } from '../data/arsenal.js';
 import { CHEST_SPAWN_CONFIG, CHEST_TYPES, REWARD_TYPES, getChestSpawnCap, getChestSpawnDelay, getChestTypeKey, getGoldRewardAmount, getRewardKey } from '../data/chests.js';
 
+const WEAPON_ROLE_SUMMARIES = {
+  arc_bolt: { functionText: '定位:自瞄單體', suitability: '適性:新手/追擊/Boss' },
+  halo_disc: { functionText: '定位:近身環刃', suitability: '適性:貼身/風箏/自保' },
+  comet_lance: { functionText: '定位:穿透控場', suitability: '適性:菁英/Boss/直線群' },
+  flame_orb: { functionText: '定位:爆炸燃燒', suitability: '適性:群怪/守點/持續傷害' },
+  chain_thunder: { functionText: '定位:跳電清場', suitability: '適性:散怪/速清/滾雪球' },
+  gale_boomerang: { functionText: '定位:往返穿透', suitability: '適性:拉扯/成排敵/雙段命中' },
+  vine_turret: { functionText: '定位:召喚砲台', suitability: '適性:站位經營/Boss/掛狀態' },
+  nova_bloom: { functionText: '定位:高爆範圍', suitability: '適性:爆發/群聚敵/補重擊' }
+};
+
+const PASSIVE_ROLE_SUMMARIES = {
+  attack_frequency: { functionText: '定位:全武器縮冷卻', suitability: '適性:全流派核心' },
+  damage_boost: { functionText: '定位:全傷害乘區', suitability: '適性:直傷/DoT/爆炸通用' },
+  projectile_count: { functionText: '定位:投射與彈道強化', suitability: '適性:所有投射物武器' },
+  move_speed: { functionText: '定位:走位生存', suitability: '適性:風箏/近身/拉怪' },
+  pickup_radius: { functionText: '定位:加速成長', suitability: '適性:掃圖/撿資源/滾雪球' },
+  max_health: { functionText: '定位:提高容錯', suitability: '適性:新手/長局/Boss戰' }
+};
+
 export class MainScene extends Phaser.Scene {
   constructor() {
     super('MainScene');
@@ -2935,7 +2955,7 @@ export class MainScene extends Phaser.Scene {
           nextLevel: 1,
           title: def.name,
           displayTitle: def.name,
-          description: this.compactUpgradeDescription(this.describeWeaponLevel(weaponKey, 1, true)),
+          description: this.buildWeaponUpgradeDescription(weaponKey, 1),
           iconKey: def.iconKey ?? null,
           maxLevel: def.maxLevel
         });
@@ -2950,7 +2970,7 @@ export class MainScene extends Phaser.Scene {
           nextLevel: currentLevel + 1,
           title: `${def.name} 等級 ${currentLevel + 1}`,
           displayTitle: def.name,
-          description: this.compactUpgradeDescription(this.describeWeaponLevel(weaponKey, currentLevel + 1, false)),
+          description: this.buildWeaponUpgradeDescription(weaponKey, currentLevel + 1),
           iconKey: def.iconKey ?? null,
           maxLevel: def.maxLevel
         });
@@ -2968,7 +2988,7 @@ export class MainScene extends Phaser.Scene {
           nextLevel: currentLevel + 1,
           title: `${def.name} 等級 ${currentLevel + 1}`,
           displayTitle: def.name,
-          description: this.compactUpgradeDescription(this.describePassiveLevel(passiveKey, currentLevel + 1), 28),
+          description: this.buildPassiveUpgradeDescription(passiveKey, currentLevel + 1),
           iconKey: def.iconKey ?? null,
           maxLevel: def.maxLevel
         });
@@ -2989,6 +3009,132 @@ export class MainScene extends Phaser.Scene {
     }
 
     return `${normalized.slice(0, Math.max(0, maxLength - 1)).trim()}...`; 
+  }
+
+  formatSeconds(ms) {
+    return `${(ms / 1000).toFixed(ms % 1000 === 0 ? 0 : 1).replace(/\.0$/, '')}秒`;
+  }
+
+  formatWeaponTierSummary(key, level) {
+    const def = WEAPON_DEFS[key];
+    const stats = getWeaponLevelData(key, level);
+
+    if (def.type === 'auto') {
+      return `傷${stats.damage} 射${stats.range} 彈${stats.projectiles}`;
+    }
+
+    if (def.type === 'orbit') {
+      return `刃${stats.count} 傷${stats.damage} 半徑${stats.radius}`;
+    }
+
+    if (def.type === 'pierce') {
+      const parts = [`傷${stats.damage}`, `緩${Math.round((1 - stats.slowMultiplier) * 100)}%`, `箭${stats.projectiles}`];
+      if (stats.freezeDuration > 0) {
+        parts.push(`凍${this.formatSeconds(stats.freezeDuration)}`);
+      }
+      if ((stats.pierce ?? 0) > 0) {
+        parts.push(`穿${stats.pierce}`);
+      }
+      return parts.join(' ');
+    }
+
+    if (def.type === 'explosive_dot') {
+      const parts = [`傷${stats.damage}`, `爆${stats.radius}`, `燃${stats.burnDamage}`];
+      if (stats.groundDuration) {
+        parts.push(`地火${this.formatSeconds(stats.groundDuration)}`);
+      }
+      return parts.join(' ');
+    }
+
+    if (def.type === 'chain') {
+      const parts = [`傷${stats.damage}`, `鏈${stats.chainCount}`, `射${stats.range}`];
+      if ((stats.branchCount ?? 0) > 0) {
+        parts.push(`次弧${stats.branchCount + 1}`);
+      }
+      return parts.join(' ');
+    }
+
+    if (def.type === 'boomerang') {
+      const parts = [`傷${stats.damage}`, `刃${stats.projectiles}`, `射${stats.range}`];
+      if (stats.knockbackForce > 0) {
+        parts.push(`退${stats.knockbackForce}`);
+      }
+      return parts.join(' ');
+    }
+
+    if (def.type === 'summon_turret') {
+      const parts = [`傷${stats.damage}`, `台${stats.summonCount}`, `冷${this.formatSeconds(stats.cooldown)}`];
+      if (stats.poisonDamage > 0) {
+        parts.push(`毒${stats.poisonDamage}`);
+      }
+      if (stats.splashRadius > 0) {
+        parts.push(`濺${stats.splashRadius}`);
+      }
+      if (stats.rootDuration > 0) {
+        parts.push(`定${this.formatSeconds(stats.rootDuration)}`);
+      }
+      return parts.join(' ');
+    }
+
+    return `傷${stats.damage} 爆${stats.radius} 種${stats.projectiles}`;
+  }
+
+  formatPassiveTierSummary(key, level) {
+    const stats = getPassiveLevelData(key, level);
+
+    if (key === 'attack_frequency') {
+      return `冷卻 -${100 - Math.round(stats.fireRateMultiplier * 100)}%`;
+    }
+
+    if (key === 'damage_boost') {
+      return `傷害 +${Math.round((stats.damageMultiplier - 1) * 100)}%`;
+    }
+
+    if (key === 'projectile_count') {
+      const effects = [];
+
+      if (stats.projectileBonus) {
+        effects.push(`投射 +${stats.projectileBonus}`);
+      }
+
+      if (stats.cooldownMultiplier && stats.cooldownMultiplier < 1) {
+        effects.push(`冷卻 -${Math.round((1 - stats.cooldownMultiplier) * 100)}%`);
+      }
+
+      if (stats.projectileSpeedBonus) {
+        effects.push(`彈速 +${Math.round(stats.projectileSpeedBonus * 100)}%`);
+      }
+
+      return effects.join(' ');
+    }
+
+    if (key === 'move_speed') {
+      return `移速 +${stats.moveSpeedBonus}`;
+    }
+
+    if (key === 'pickup_radius') {
+      return `拾取 +${stats.pickupRadiusBonus}`;
+    }
+
+    return `生命 +${stats.maxHealthBonus} 回${stats.healOnGain}`;
+  }
+
+  buildWeaponUpgradeDescription(key, level) {
+    const role = WEAPON_ROLE_SUMMARIES[key] ?? { functionText: '定位:武器強化', suitability: '適性:泛用' };
+    return [
+      `${role.functionText} | ${role.suitability}`,
+      `當前等級 Lv${level}`,
+      this.formatWeaponTierSummary(key, level)
+    ].join('\n');
+  }
+
+  buildPassiveUpgradeDescription(key, level) {
+    const role = PASSIVE_ROLE_SUMMARIES[key] ?? { functionText: '定位:屬性強化', suitability: '適性:泛用' };
+    return [
+      `${role.functionText} | ${role.suitability}`,
+      `當前等級 Lv${level}`,
+      this.formatPassiveTierSummary(key, level)
+    ].join('\n');
   }
 
   describeWeaponLevel(key, level, isUnlock) {

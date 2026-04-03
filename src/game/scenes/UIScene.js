@@ -164,15 +164,15 @@ export class UIScene extends Phaser.Scene {
     this.resumeButton.setPosition(gameSize.width / 2, gameSize.height / 2 + 52);
 
     this.levelUpBackdrop.setSize(gameSize.width, gameSize.height);
-    this.levelUpPanel.setSize(Math.min(gameSize.width - 28, 324), Math.min(gameSize.height - 40, 510)).setPosition(gameSize.width / 2, gameSize.height / 2);
+    this.levelUpPanel.setSize(Math.min(gameSize.width - 28, 324), Math.min(gameSize.height - 32, isShortLandscape ? 500 : 520)).setPosition(gameSize.width / 2, gameSize.height / 2);
     this.levelUpTitle.setPosition(gameSize.width / 2, gameSize.height / 2 - 188);
     this.levelUpTitle.setFontSize(isTallMobile ? '23px' : '27px');
     this.optionButtons.forEach((button, index) => {
-      button.container.setPosition(gameSize.width / 2, gameSize.height / 2 - 92 + index * 90);
+      button.container.setPosition(gameSize.width / 2, gameSize.height / 2 - 100 + index * 100);
       button.background.width = Math.min(gameSize.width - 46, 286);
-      button.background.height = 80;
+      button.background.height = isShortLandscape ? 92 : 96;
     });
-    this.refreshButton.setPosition(gameSize.width / 2, gameSize.height / 2 + 186);
+    this.refreshButton.setPosition(gameSize.width / 2, gameSize.height / 2 + (isShortLandscape ? 188 : 196));
 
     this.gameOverBackdrop.setSize(gameSize.width, gameSize.height);
     this.gameOverPanel.setSize(Math.min(gameSize.width - 34, 320), Math.min(gameSize.height - 80, 300)).setPosition(gameSize.width / 2, gameSize.height / 2);
@@ -359,38 +359,39 @@ export class UIScene extends Phaser.Scene {
   }
 
   createOptionButton(index) {
-    const container = this.add.container(this.scale.width / 2, this.scale.height / 2 - 92 + index * 90);
+    const container = this.add.container(this.scale.width / 2, this.scale.height / 2 - 100 + index * 100);
     container.setScrollFactor(0).setVisible(false);
 
-    const background = this.add.rectangle(0, 0, 286, 80, 0x102839, 1).setStrokeStyle(2, 0x6dd3ff, 0.38).setInteractive({ useHandCursor: true });
+    const background = this.add.rectangle(0, 0, 286, 96, 0x102839, 1).setStrokeStyle(2, 0x6dd3ff, 0.38).setInteractive({ useHandCursor: true });
     const iconFrame = this.add.rectangle(-104, 0, 50, 50, 0x0c2130, 0.96).setStrokeStyle(2, 0x6dd3ff, 0.28).setVisible(false);
     const icon = this.add.image(-104, 0, 'arc_bolt_icon').setVisible(false);
-    const title = this.add.text(-124, -21, '', {
+    const title = this.add.text(-124, -34, '', {
       fontFamily: 'Trebuchet MS',
-      fontSize: '17px',
+      fontSize: '16px',
       color: '#ffffff'
     }).setOrigin(0, 0.5);
-    const starBackdrop = this.add.text(-124, -1, '', {
+    const starBackdrop = this.add.text(-124, -18, '', {
       fontFamily: 'Trebuchet MS',
-      fontSize: '12px',
+      fontSize: '11px',
       color: '#6d7d89',
       stroke: '#132432',
       strokeThickness: 2
     }).setOrigin(0, 0.5);
-    const stars = this.add.text(-124, -1, '', {
+    const stars = this.add.text(-124, -18, '', {
       fontFamily: 'Trebuchet MS',
-      fontSize: '12px',
+      fontSize: '11px',
       color: '#f6d97a',
       stroke: '#47320c',
       strokeThickness: 2
     }).setOrigin(0, 0.5);
-    const description = this.add.text(-124, 18, '', {
+    const description = this.add.text(-124, -4, '', {
       fontFamily: 'Trebuchet MS',
-      fontSize: '11px',
+      fontSize: '9px',
       color: '#b8cfdb',
       wordWrap: { width: 218 },
-      lineSpacing: 2
-    }).setOrigin(0, 0.5);
+      lineSpacing: 1
+    }).setOrigin(0, 0);
+    description.setFixedSize(220, 58);
 
     background.on('pointerover', () => background.setFillStyle(0x15354a, 1));
     background.on('pointerout', () => background.setFillStyle(0x102839, 1));
@@ -621,19 +622,25 @@ export class UIScene extends Phaser.Scene {
         button.icon.setDisplaySize(34, 34);
         button.icon.setVisible(true);
         button.iconFrame.setVisible(true);
-        button.title.setPosition(-72, -21);
-        button.starBackdrop.setPosition(-72, -1);
-        button.stars.setPosition(-72, -1);
-        button.description.setPosition(-72, 18);
+        button.title.setPosition(-72, -34);
+        button.starBackdrop.setPosition(-72, -18);
+        button.stars.setPosition(-72, -18);
+        button.description.setPosition(-72, -4);
+        button.description.setFontSize(8);
+        button.description.setLineSpacing(1);
         button.description.setWordWrapWidth(166);
+        button.description.setFixedSize(166, 58);
       } else {
         button.icon.setVisible(false);
         button.iconFrame.setVisible(false);
-        button.title.setPosition(-126, -21);
-        button.starBackdrop.setPosition(-126, -1);
-        button.stars.setPosition(-126, -1);
-        button.description.setPosition(-126, 18);
+        button.title.setPosition(-126, -34);
+        button.starBackdrop.setPosition(-126, -18);
+        button.stars.setPosition(-126, -18);
+        button.description.setPosition(-126, -4);
+        button.description.setFontSize(9);
+        button.description.setLineSpacing(1);
         button.description.setWordWrapWidth(220);
+        button.description.setFixedSize(220, 58);
       }
 
       button.container.setVisible(true);
