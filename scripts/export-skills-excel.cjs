@@ -148,6 +148,33 @@ function formatWeaponLevel(type, level, index) {
     parts.push(`定身 ${msToSeconds(level.rootDuration)}`);
   }
 
+  if (type === 'ground_line') {
+    if (level.segments != null) {
+      parts.push(`尖刺段數 ${level.segments}`);
+    }
+
+    if (level.width != null) {
+      parts.push(`地脈寬度 ${level.width}`);
+    }
+
+    if (level.segmentDelay != null) {
+      parts.push(`推進間隔 ${msToSeconds(level.segmentDelay)}`);
+    }
+
+    if (level.spikeDuration != null) {
+      parts.push(`尖刺持續 ${msToSeconds(level.spikeDuration)}`);
+    }
+
+    if (level.aftershock) {
+      parts.push(`餘震 ${msToSeconds(level.aftershockDelay ?? 0)}`);
+      parts.push(`餘震倍率 ${Math.round((level.aftershockDamageMultiplier ?? 0) * 100)}%`);
+    }
+
+    if (level.finisherBurst) {
+      parts.push('終段爆發');
+    }
+  }
+
   if (type === 'boomerang' && index <= 2) {
     parts.push('可往返二次命中');
   }
@@ -243,6 +270,10 @@ const weaponRoleNotes = {
     functionText: '在玩家周圍架設自動砲台，提供獨立火力、中毒持續傷害與腐蝕增傷，最終可濺射並定身。',
     suitability: '適合站位經營、打 Boss、需要穩定掛狀態的流派。和傷害強化、攻速提升、最大生命都不錯。'
   },
+  earthspike_line: {
+    functionText: '沿玩家前方地面依序竄出尖刺，形成直線封路與延遲爆發，擅長壓制衝臉怪與窄道敵群。',
+    suitability: '適合卡窄道、打直線怪群、阻擋近身壓力。和傷害強化、攻速提升很搭，後期餘震與終段爆發更強。'
+  },
   nova_bloom: {
     functionText: '拋物式爆炸種子，節奏較慢但單發範圍與爆發都高，適合補重擊與範圍清場。',
     suitability: '適合爆發、守群聚、補足大範圍 AoE。和傷害強化、攻速提升、投射增幅很搭。'
@@ -277,20 +308,27 @@ const passiveRoleNotes = {
 };
 
 function buildWeaponRows(weaponDefs) {
-  return Object.values(weaponDefs).map((weapon) => ({
-    key: weapon.key,
-    name: weapon.name,
-    category: '主動',
-    type: weapon.type,
-    summary: weapon.unlockDescription,
-    functionText: weaponRoleNotes[weapon.key].functionText,
-    suitability: weaponRoleNotes[weapon.key].suitability,
-    lv1: formatWeaponLevel(weapon.type, weapon.levels[0], 1),
-    lv2: formatWeaponLevel(weapon.type, weapon.levels[1], 2),
-    lv3: formatWeaponLevel(weapon.type, weapon.levels[2], 3),
-    lv4: formatWeaponLevel(weapon.type, weapon.levels[3], 4),
-    lv5: formatWeaponLevel(weapon.type, weapon.levels[4], 5)
-  }));
+  return Object.values(weaponDefs).map((weapon) => {
+    const roleNote = weaponRoleNotes[weapon.key] ?? {
+      functionText: '依照技能資料整理的武器效果摘要。',
+      suitability: '適合依武器機制搭配對應的輸出或控場玩法。'
+    };
+
+    return {
+      key: weapon.key,
+      name: weapon.name,
+      category: '主動',
+      type: weapon.type,
+      summary: weapon.unlockDescription,
+      functionText: roleNote.functionText,
+      suitability: roleNote.suitability,
+      lv1: formatWeaponLevel(weapon.type, weapon.levels[0], 1),
+      lv2: formatWeaponLevel(weapon.type, weapon.levels[1], 2),
+      lv3: formatWeaponLevel(weapon.type, weapon.levels[2], 3),
+      lv4: formatWeaponLevel(weapon.type, weapon.levels[3], 4),
+      lv5: formatWeaponLevel(weapon.type, weapon.levels[4], 5)
+    };
+  });
 }
 
 function buildPassiveRows(passiveDefs) {

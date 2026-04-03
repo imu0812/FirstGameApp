@@ -26,6 +26,7 @@ const WEAPON_ROLE_SUMMARIES = {
   chain_thunder: { functionText: '定位:跳電清場', suitability: '適性:散怪/速清/滾雪球' },
   gale_boomerang: { functionText: '定位:往返穿透', suitability: '適性:拉扯/成排敵/雙段命中' },
   vine_turret: { functionText: '定位:召喚砲台', suitability: '適性:站位經營/Boss/掛狀態' },
+  earthspike_line: { functionText: '定位:地面連鎖爆發', suitability: '適性:窄道/衝臉怪/直線群' },
   nova_bloom: { functionText: '定位:高爆範圍', suitability: '適性:爆發/群聚敵/補重擊' }
 };
 
@@ -51,7 +52,9 @@ const SKILL_AUDIO_CONFIG = {
   halo_disc_hit_sfx: { volume: 0.12, minInterval: 90 },
   nova_bloom_throw_sfx: { volume: 0.18, minInterval: 140 },
   nova_bloom_explode_sfx: { volume: 0.2, minInterval: 90 },
-  vine_turret_fire_sfx: { volume: 0.16, minInterval: 90 }
+  vine_turret_fire_sfx: { volume: 0.16, minInterval: 90 },
+  earthspike_line_cast_sfx: { volume: 0.2, minInterval: 160 },
+  earthspike_line_erupt_segment_sfx: { volume: 0.18, minInterval: 65 }
 };
 
 export class MainScene extends Phaser.Scene {
@@ -105,6 +108,7 @@ export class MainScene extends Phaser.Scene {
     this.totalPausedMs = 0;
     this.pauseStartedAt = null;
     this.burningGrounds = [];
+    this.earthspikeLines = [];
     this.bossPhaseIntervalSeconds = 150;
     this.nextBossEligibleAt = this.bossPhases[0]?.spawnAt ?? 0;
 
@@ -278,6 +282,7 @@ export class MainScene extends Phaser.Scene {
     this.updateOrbitWeapons();
     this.updateVineTurrets(now);
     this.updateBurningGrounds(now);
+    this.updateEarthspikeLines(now);
     this.updateMagnetizedGems();
     this.updateGemAttraction();
     this.updateRewardDrops();
@@ -301,6 +306,7 @@ export class MainScene extends Phaser.Scene {
     }
     this.bossWarningEvent?.remove(false);
     this.hideBossDashTelegraph();
+    this.clearEarthspikeLines();
     this.debugHitboxGraphics?.clear();
     this.debugHitboxGraphics?.destroy();
   }
@@ -1315,6 +1321,10 @@ export class MainScene extends Phaser.Scene {
     if (weaponKey === 'vine_turret') {
       this.syncVineTurrets();
     }
+
+    if (weaponKey === 'earthspike_line') {
+      this.fireEarthspikeLine();
+    }
   }
 
   fireArcBolt() {
@@ -1455,6 +1465,65 @@ export class MainScene extends Phaser.Scene {
         knockbackForce: stats.knockbackForce ?? 0
       }
     }, baseAngle);
+  }
+
+  fireEarthspikeLine() {
+    const stats = this.getWeaponStats('earthspike_line');
+    const angle = this.getEarthspikeAimAngle(stats.range);
+    const direction = new Phaser.Math.Vector2(Math.cos(angle), Math.sin(angle));
+    const perpendicular = new Phaser.Math.Vector2(-direction.y, direction.x);
+    const segmentLength = stats.range / Math.max(1, stats.segments);
+    const startOffset = Math.max(30, stats.width * 0.9);
+    const spawnTime = this.time.now;
+    const telegraphLeadTime = stats.telegraphLeadTime ?? 220;
+
+    this.playSkillAudio('earthspike_line_cast_sfx');
+
+    const line = {
+      angle,
+      direction,
+      perpendicular,
+      finisherBurst: Boolean(stats.finisherBurst),
+      segments: [],
+      finished: false
+    };
+
+    for (let index = 0; index < stats.segments; index += 1) {
+      const distance = startOffset + segmentLength * (index + 0.65);
+      const x = this.player.x + direction.x * distance;
+      const y = this.player.y + direction.y * distance;
+      const telegraph = this.createEarthspikeTelegraph(x, y, angle, stats.width, segmentLength);
+
+      line.segments.push({
+        index,
+        x,
+        y,
+        angle,
+        width: stats.width,
+        length: Math.max(stats.width * 1.15, segmentLength * 0.92),
+        damage: stats.damage,
+        hitCooldown: stats.hitCooldown,
+        activatedAt: spawnTime + telegraphLeadTime + index * stats.segmentDelay,
+        expiresAt: spawnTime + telegraphLeadTime + index * stats.segmentDelay + stats.spikeDuration,
+        active: false,
+        finished: false,
+        aftershockTriggered: false,
+        aftershockAt: stats.aftershock ? spawnTime + telegraphLeadTime + index * stats.segmentDelay + stats.aftershockDelay : null,
+        aftershockExpiresAt: stats.aftershock ? spawnTime + telegraphLeadTime + index * stats.segmentDelay + stats.aftershockDelay + Math.max(180, Math.floor(stats.spikeDuration * 0.58)) : null,
+        aftershockDamage: stats.aftershock
+          ? Math.max(1, Math.round(stats.damage * (stats.aftershockDamageMultiplier ?? 0.55) * 100) / 100)
+          : 0,
+        telegraph,
+        spikeVisual: null,
+        aftershockVisual: null,
+        impactVisual: null,
+        hitTracker: new Map(),
+        aftershockHitTracker: new Map(),
+        finisherBurstDone: false
+      });
+    }
+
+    this.earthspikeLines.push(line);
   }
 
   syncVineTurrets() {
@@ -1766,6 +1835,104 @@ export class MainScene extends Phaser.Scene {
     }
 
     this.playSkillAudio(projectile.explosionSoundKey);
+  }
+
+  getEarthspikeAimAngle(range = 260) {
+    const target = this.findNearestEnemy(range);
+
+    if (target) {
+      return Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y);
+    }
+
+    if (this.player.moveDirection.lengthSq() > 0.0001) {
+      return this.player.moveDirection.angle();
+    }
+
+    return this.player.rotation ?? 0;
+  }
+
+  createEarthspikeTelegraph(x, y, angle, width, length) {
+    const telegraph = this.add.image(x, y, 'earthspike_line_projectile');
+    telegraph.setDepth(1.52);
+    telegraph.setRotation(angle);
+    telegraph.setAlpha(0.22);
+    telegraph.setTint(0xffd89a);
+    telegraph.setDisplaySize(length * 1.06, Math.max(14, width * 0.78));
+    this.tweens.add({
+      targets: telegraph,
+      alpha: { from: 0.18, to: 0.42 },
+      scaleX: 1.04,
+      scaleY: 1.02,
+      duration: 180,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.InOut'
+    });
+    return telegraph;
+  }
+
+  createEarthspikeSpikeVisual(segment) {
+    const spike = this.add.image(segment.x, segment.y, 'earthspike_line_projectile');
+    spike.setDepth(3.05);
+    spike.setRotation((segment.angle ?? 0) + Math.PI / 2);
+    spike.setDisplaySize(segment.length * 0.98, Math.max(22, segment.width * 1.62));
+    spike.setAlpha(0.96);
+    spike.setTint(0xfff0c8);
+
+    this.tweens.add({
+      targets: spike,
+      alpha: { from: 0.96, to: 0.54 },
+      scaleX: 1.06,
+      scaleY: 1.02,
+      duration: Math.max(180, segment.expiresAt - segment.activatedAt),
+      ease: 'Cubic.Out'
+    });
+
+    const impactKey = this.textures.exists('earthspike_line_impact')
+      ? 'earthspike_line_impact'
+      : null;
+
+    if (impactKey) {
+      const impact = this.add.image(segment.x, segment.y, impactKey).setDepth(2.96);
+      impact.setRotation((segment.angle ?? 0) + Math.PI / 2);
+      impact.setAlpha(0.88);
+      impact.setDisplaySize(segment.width * 2.2, segment.width * 2.2);
+      this.tweens.add({
+        targets: impact,
+        alpha: 0,
+        scaleX: 1.18,
+        scaleY: 1.18,
+        duration: 210,
+        ease: 'Quad.Out',
+        onComplete: () => impact.destroy()
+      });
+      segment.impactVisual = impact;
+    }
+
+    return spike;
+  }
+
+  createEarthspikeAftershockVisual(segment) {
+    const textureKey = this.textures.exists('earthspike_line_aftershock')
+      ? 'earthspike_line_aftershock'
+      : 'earthspike_line_projectile';
+    const aftershock = this.add.image(segment.x, segment.y, textureKey);
+    aftershock.setDepth(2.92);
+    aftershock.setRotation((segment.angle ?? 0) + Math.PI / 2);
+    aftershock.setAlpha(0.82);
+    aftershock.setTint(0xffc57d);
+    aftershock.setDisplaySize(segment.length * 0.92, Math.max(18, segment.width * 1.36));
+
+    this.tweens.add({
+      targets: aftershock,
+      alpha: 0.15,
+      scaleX: 1.08,
+      scaleY: 1.02,
+      duration: Math.max(150, (segment.aftershockExpiresAt ?? this.time.now + 180) - this.time.now),
+      ease: 'Sine.Out'
+    });
+
+    return aftershock;
   }
 
   syncOrbitBlades() {
@@ -2533,6 +2700,144 @@ export class MainScene extends Phaser.Scene {
     }
   }
 
+  updateEarthspikeLines(time = this.time.now) {
+    let targetDied = false;
+
+    for (let lineIndex = this.earthspikeLines.length - 1; lineIndex >= 0; lineIndex -= 1) {
+      const line = this.earthspikeLines[lineIndex];
+      let lineFinished = true;
+
+      for (let segmentIndex = 0; segmentIndex < line.segments.length; segmentIndex += 1) {
+        const segment = line.segments[segmentIndex];
+
+        if (!segment.active && time >= segment.activatedAt) {
+          segment.active = true;
+          segment.spikeVisual = this.createEarthspikeSpikeVisual(segment);
+          segment.telegraph?.destroy();
+          segment.telegraph = null;
+          this.playSkillAudio('earthspike_line_erupt_segment_sfx', {
+            volume: segmentIndex === line.segments.length - 1 ? 0.2 : 0.18
+          });
+
+          if (segment.index === line.segments.length - 1 && line.finisherBurst) {
+            segment.finisherBurstDone = true;
+            this.createExplosionEffect(segment.x, segment.y, segment.width * 1.25, 'earthspike_line_impact');
+            targetDied = this.damageEarthspikeBurst(segment, Math.max(segment.width * 0.95, 26), Math.max(1, Math.round(segment.damage * 1.5 * 100) / 100)) || targetDied;
+          }
+        }
+
+        if (segment.active && time < segment.expiresAt) {
+          targetDied = this.applyEarthspikeSegmentDamage(segment, false, time) || targetDied;
+          lineFinished = false;
+        }
+
+        if (!segment.aftershockTriggered && segment.aftershockAt && time >= segment.aftershockAt) {
+          segment.aftershockTriggered = true;
+          segment.aftershockVisual = this.createEarthspikeAftershockVisual(segment);
+        }
+
+        if (segment.aftershockTriggered && time < (segment.aftershockExpiresAt ?? 0)) {
+          targetDied = this.applyEarthspikeSegmentDamage(segment, true, time) || targetDied;
+          lineFinished = false;
+        }
+
+        const finishedMain = segment.active && time >= segment.expiresAt;
+        const finishedAftershock = !segment.aftershockAt || time >= (segment.aftershockExpiresAt ?? 0);
+
+        if (finishedMain && finishedAftershock && !segment.finished) {
+          segment.finished = true;
+          segment.spikeVisual?.destroy();
+          segment.aftershockVisual?.destroy();
+          segment.telegraph?.destroy();
+          segment.spikeVisual = null;
+          segment.aftershockVisual = null;
+          segment.telegraph = null;
+        }
+
+        if (!segment.finished) {
+          lineFinished = false;
+        }
+      }
+
+      if (lineFinished) {
+        this.earthspikeLines.splice(lineIndex, 1);
+      }
+    }
+
+    if (targetDied) {
+      this.emitStats(true);
+    }
+  }
+
+  applyEarthspikeSegmentDamage(segment, isAftershock, time) {
+    const tracker = isAftershock ? segment.aftershockHitTracker : segment.hitTracker;
+    const damage = isAftershock ? segment.aftershockDamage : segment.damage;
+    let targetDied = false;
+
+    const inspectTarget = (target) => {
+      if (!target?.active || !this.isTargetInsideEarthspikeSegment(target, segment)) {
+        return;
+      }
+
+      const lastHitAt = tracker.get(target) ?? -Infinity;
+      if (time - lastHitAt < segment.hitCooldown) {
+        return;
+      }
+
+      tracker.set(target, time);
+      targetDied = this.damageEnemy(target, damage) || targetDied;
+    };
+
+    this.enemies.children.iterate(inspectTarget);
+    this.bosses.children.iterate(inspectTarget);
+    return targetDied;
+  }
+
+  isTargetInsideEarthspikeSegment(target, segment) {
+    const dx = target.x - segment.x;
+    const dy = target.y - segment.y;
+    const localX = dx * Math.cos(segment.angle) + dy * Math.sin(segment.angle);
+    const localY = dx * -Math.sin(segment.angle) + dy * Math.cos(segment.angle);
+    const halfLength = segment.length * 0.54;
+    const halfWidth = segment.width * 0.86;
+    return Math.abs(localX) <= halfLength && Math.abs(localY) <= halfWidth;
+  }
+
+  damageEarthspikeBurst(segment, radius, damage) {
+    let targetDied = false;
+    const radiusSq = radius * radius;
+
+    const inspectTarget = (target) => {
+      if (!target?.active) {
+        return;
+      }
+
+      const dx = target.x - segment.x;
+      const dy = target.y - segment.y;
+      if (dx * dx + dy * dy > radiusSq) {
+        return;
+      }
+
+      targetDied = this.damageEnemy(target, damage) || targetDied;
+    };
+
+    this.enemies.children.iterate(inspectTarget);
+    this.bosses.children.iterate(inspectTarget);
+    return targetDied;
+  }
+
+  clearEarthspikeLines() {
+    this.earthspikeLines.forEach((line) => {
+      line.segments.forEach((segment) => {
+        segment.telegraph?.destroy();
+        segment.spikeVisual?.destroy();
+        segment.aftershockVisual?.destroy();
+        segment.impactVisual?.destroy();
+      });
+    });
+    this.earthspikeLines = [];
+  }
+
   clearBurningGrounds() {
     this.burningGrounds.forEach((ground) => ground.visuals?.forEach((visual) => visual?.destroy()));
     this.burningGrounds = [];
@@ -3160,6 +3465,21 @@ export class MainScene extends Phaser.Scene {
       return parts.join(' ');
     }
 
+    if (def.type === 'ground_line') {
+      const parts = [`傷${stats.damage}`, `段${stats.segments}`, `寬${stats.width}`, `射${stats.range}`];
+      if (stats.telegraphLeadTime) {
+        parts.push(`預告${this.formatSeconds(stats.telegraphLeadTime)}`);
+      }
+      if (stats.aftershock) {
+        parts.push(`餘震${this.formatSeconds(stats.aftershockDelay ?? 0)}`);
+        parts.push(`餘震傷${Math.round((stats.aftershockDamageMultiplier ?? 0) * 100)}%`);
+      }
+      if (stats.finisherBurst) {
+        parts.push('終段爆發');
+      }
+      return parts.join(' ');
+    }
+
     return `傷${stats.damage} 爆${stats.radius} 種${stats.projectiles}`;
   }
 
@@ -3261,6 +3581,15 @@ export class MainScene extends Phaser.Scene {
       const durationText = stats.summonDuration ? ` | \u6301\u7e8c ${Math.round(stats.summonDuration / 100) / 10}\u79d2` : '';
       const cooldownText = stats.cooldown ? ` | \u51b7\u537b ${Math.round(stats.cooldown / 100) / 10}\u79d2` : '';
       return `${intro}\u50b7\u5bb3 ${stats.damage} | \u7832\u53f0 ${stats.summonCount}${durationText}${cooldownText}${poisonText}${splashText}`;
+    }
+
+    if (def.type === 'ground_line') {
+      const telegraphText = stats.telegraphLeadTime ? ` | \u9810\u544a ${Math.round(stats.telegraphLeadTime / 100) / 10}\u79d2` : '';
+      const aftershockText = stats.aftershock
+        ? ` | \u9918\u9707 ${Math.round((stats.aftershockDamageMultiplier ?? 0) * 100)}%`
+        : '';
+      const finisherText = stats.finisherBurst ? ' | \u7d42\u6bb5\u7206\u767c' : '';
+      return `${intro}\u50b7\u5bb3 ${stats.damage} | \u5c16\u523a ${stats.segments} | \u5bec\u5ea6 ${stats.width}${telegraphText}${aftershockText}${finisherText}`;
     }
 
     return `${intro}\u50b7\u5bb3 ${stats.damage} | \u7206\u70b8 ${stats.radius} | \u7a2e\u5b50 ${stats.projectiles}`;

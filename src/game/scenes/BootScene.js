@@ -9,6 +9,10 @@ import galeBoomerangIconImage from '../../assets/gale_boomerang.svg';
 import galeBoomerangProjectileImage from '../../assets/gale_boomerang_projectile_mobile.png';
 import vineTurretIconImage from '../../assets/vine_turret.svg';
 import vineTurretProjectileImage from '../../assets/vine_turret_projectile_mobile.png';
+import earthspikeLineIconImage from '../../assets/earthspike_line.svg';
+import earthspikeLineProjectileImage from '../../assets/earthspike_line_projectile_mobile.png';
+import earthspikeLineImpactImage from '../../assets/earthspike_line_impact.png';
+import earthspikeLineAftershockImage from '../../assets/earthspike_line_aftershock.png';
 import vineSeedProjectileImage from '../../assets/vine_seed_projectile.png';
 import vineTurretPoisonBurstImage from '../../assets/vine_turret_poison_burst.png';
 import vineTurretSummonLandImage from '../../assets/vine_turret_summon_land.png';
@@ -56,6 +60,8 @@ import novaBloomThrowAudioOgg from '../../assets/audio/nova_bloom_throw.ogg';
 import novaBloomThrowAudioMp3 from '../../assets/audio/nova_bloom_throw.mp3';
 import vineTurretFireAudioOgg from '../../assets/audio/vine_turret_fire.ogg';
 import vineTurretFireAudioMp3 from '../../assets/audio/vine_turret_fire.mp3';
+import earthspikeLineCastAudioMp3 from '../../assets/audio/earthspike_line_cast.mp3';
+import earthspikeLineEruptSegmentAudioMp3 from '../../assets/audio/earthspike_line_erupt_segment.mp3';
 export class BootScene extends Phaser.Scene {
   constructor() {
     super('BootScene');
@@ -73,6 +79,10 @@ export class BootScene extends Phaser.Scene {
     this.load.image('vine_turret_icon', vineTurretIconImage);
     this.load.image('vine_turret_body', vineTurretIconImage);
     this.load.image('vine_turret_projectile', vineTurretProjectileImage);
+    this.load.image('earthspike_line_icon', earthspikeLineIconImage);
+    this.load.image('earthspike_line_projectile', earthspikeLineProjectileImage);
+    this.load.image('earthspike_line_impact', earthspikeLineImpactImage);
+    this.load.image('earthspike_line_aftershock', earthspikeLineAftershockImage);
     this.load.image('vine_seed_projectile', vineSeedProjectileImage);
     this.load.image('vine_turret_poison_burst', vineTurretPoisonBurstImage);
     this.load.image('vine_turret_summon_land', vineTurretSummonLandImage);
@@ -107,6 +117,8 @@ export class BootScene extends Phaser.Scene {
     this.load.audio('nova_bloom_throw_sfx', [novaBloomThrowAudioOgg, novaBloomThrowAudioMp3]);
     this.load.audio('nova_bloom_explode_sfx', [novaBloomExplodeAudioOgg, novaBloomExplodeAudioMp3]);
     this.load.audio('vine_turret_fire_sfx', [vineTurretFireAudioOgg, vineTurretFireAudioMp3]);
+    this.load.audio('earthspike_line_cast_sfx', earthspikeLineCastAudioMp3);
+    this.load.audio('earthspike_line_erupt_segment_sfx', earthspikeLineEruptSegmentAudioMp3);
   }
 
   create() {

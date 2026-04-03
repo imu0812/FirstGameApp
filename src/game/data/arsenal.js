@@ -117,6 +117,23 @@ export const WEAPON_DEFS = {
       { range: 384, damage: 6, cooldown: 660, summonCount: 3, summonDuration: 27800, projectileSpeed: 334, projectileLifeSpan: 1500, projectileScale: 1.16, tint: 0xeefff2, projectileTint: 0xbaff96, scale: 1.02, poisonDamage: 2.8, poisonDuration: 3600, poisonTickInterval: 460, corrosionBonus: 0.18, corrosionDuration: 3600, bossPoisonMultiplier: 0.7, splashRadius: 64, splashDamage: 4.5, rootDuration: 1000 }
     ]
   },
+  earthspike_line: {
+    key: 'earthspike_line',
+    iconKey: 'earthspike_line_icon',
+    projectileKey: 'earthspike_line_projectile',
+    name: '地脈尖刺',
+    category: 'weapon',
+    type: 'ground_line',
+    maxLevel: 5,
+    unlockDescription: '地面依序冒出尖刺，形成直線封鎖區，適合卡窄道與打衝臉怪群。',
+    levels: [
+      { segments: 4, damage: 3, width: 58, range: 220, cooldown: 3760, telegraphLeadTime: 260, segmentDelay: 190, spikeDuration: 360, hitCooldown: 220, aftershock: false },
+      { segments: 5, damage: 3, width: 60, range: 250, cooldown: 3640, telegraphLeadTime: 250, segmentDelay: 182, spikeDuration: 370, hitCooldown: 220, aftershock: false },
+      { segments: 5, damage: 4, width: 66, range: 270, cooldown: 3500, telegraphLeadTime: 240, segmentDelay: 174, spikeDuration: 380, hitCooldown: 210, aftershock: false },
+      { segments: 6, damage: 4, width: 68, range: 290, cooldown: 3380, telegraphLeadTime: 230, segmentDelay: 168, spikeDuration: 400, hitCooldown: 210, aftershock: true, aftershockDelay: 320, aftershockDamageMultiplier: 0.55 },
+      { segments: 7, damage: 6, width: 72, range: 340, cooldown: 3260, telegraphLeadTime: 220, segmentDelay: 160, spikeDuration: 420, hitCooldown: 200, aftershock: true, aftershockDelay: 300, aftershockDamageMultiplier: 0.65, finisherBurst: true }
+    ]
+  },
   nova_bloom: {
     key: 'nova_bloom',
     iconKey: 'nova_bloom_icon',
