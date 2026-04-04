@@ -17,6 +17,8 @@ import {
   getWeaponLevelData
 } from '../data/arsenal.js';
 import { CHEST_SPAWN_CONFIG, CHEST_TYPES, REWARD_TYPES, getChestSpawnCap, getChestSpawnDelay, getChestTypeKey, getGoldRewardAmount, getRewardKey } from '../data/chests.js';
+import { TestModeController } from '../debug/TestModeController.js';
+import { isTestModeEnabled } from '../debug/testModeConfig.js';
 
 const WEAPON_ROLE_SUMMARIES = {
   arc_bolt: { functionText: '定位:自瞄單體', suitability: '適性:新手/追擊/Boss' },
@@ -63,6 +65,13 @@ export class MainScene extends Phaser.Scene {
   }
 
   create() {
+    this.testModeEnabled = isTestModeEnabled();
+    this.testModeState = {
+      bossScheduleSnapshot: null,
+      trackedEnemies: new Set(),
+      trackedBosses: new Set(),
+      trackedBossProjectiles: new Set()
+    };
     this.worldSize = { width: 2200, height: 2200 };
     this.basePlayerStats = {
       moveSpeed: 220,
@@ -244,6 +253,8 @@ export class MainScene extends Phaser.Scene {
 
     this.game.events.on('virtual-joystick-move', this.handleVirtualJoystick, this);
     this.game.events.on('toggle-pause', this.togglePause, this);
+    this.testModeController = this.testModeEnabled ? new TestModeController(this) : null;
+    this.testModeController?.attach();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdown, this);
 
     this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
@@ -300,7 +311,8 @@ export class MainScene extends Phaser.Scene {
   shutdown() {
     this.game.events.off('virtual-joystick-move', this.handleVirtualJoystick, this);
     this.game.events.off('toggle-pause', this.togglePause, this);
-    this.scale.off('resize', this.handleResize, this);
+    this.testModeController?.detach();
+    this.testModeController = null;
     if (this.spawnChestEvent) {
       this.spawnChestEvent.remove(false);
     }
@@ -710,6 +722,10 @@ export class MainScene extends Phaser.Scene {
 
 
   updateBossSchedule() {
+    if (this.testModeEnabled) {
+      return;
+    }
+
     if (this.stageCleared || this.pendingBossPhase || this.hasActiveBoss()) {
       return;
     }
@@ -771,12 +787,14 @@ export class MainScene extends Phaser.Scene {
     return this.bossPhases.find((phase) => phase.phase === phaseNumber) ?? null;
   }
 
-  spawnBoss(phaseConfig) {
+  spawnBoss(phaseConfig, options = {}) {
     if (!phaseConfig) {
       return;
     }
 
-    this.beginSpawnSuppression();
+    if (options.suppressNormalSpawns !== false) {
+      this.beginSpawnSuppression();
+    }
     const spawnPoint = this.getBossSpawnPoint();
     const scaledBossConfig = this.buildScaledBossConfig(phaseConfig);
     let boss = this.bosses.getFirstDead(false);
@@ -787,6 +805,9 @@ export class MainScene extends Phaser.Scene {
       boss = new Boss(this, spawnPoint.x, spawnPoint.y, scaledBossConfig);
       this.bosses.add(boss);
     }
+
+    this.assignTestSpawnMetadata(boss, options.isTestSpawn ? 'test' : 'normal');
+    return boss;
   }
 
   getDifficultyStageForTime(elapsedSeconds) {
@@ -888,6 +909,11 @@ export class MainScene extends Phaser.Scene {
       this.spawnEnemyEvent.remove(false);
     }
 
+    if (this.testModeEnabled) {
+      this.spawnEnemyEvent = null;
+      return;
+    }
+
     this.spawnEnemyEvent = this.time.addEvent({
       delay: this.currentDifficultyStage.spawnDelay,
       callback: this.spawnEnemyWave,
@@ -965,11 +991,7 @@ export class MainScene extends Phaser.Scene {
       return;
     }
 
-    const spawnDistance = Phaser.Math.Between(320, 460);
-    const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
-
-    const x = this.player.x + Math.cos(angle) * spawnDistance;
-    const y = this.player.y + Math.sin(angle) * spawnDistance;
+    const { x, y } = this.getTestEnemySpawnPoint();
 
     const enemyType = this.chooseEnemyType();
 
@@ -978,15 +1000,100 @@ export class MainScene extends Phaser.Scene {
     }
 
     const enemyConfig = this.buildScaledEnemyConfig(enemyType);
+    this.spawnEnemyFromConfig(enemyConfig, x, y);
+  }
+
+  spawnEnemyFromConfig(enemyConfig, x, y, options = {}) {
     let enemy = this.enemies.getFirstDead(false);
 
     if (enemy) {
       enemy.spawn(x, y, enemyConfig);
-      return;
+      this.assignTestSpawnMetadata(enemy, options.isTestSpawn ? 'test' : 'normal');
+      return enemy;
     }
 
     enemy = new Enemy(this, x, y, enemyConfig);
+    this.assignTestSpawnMetadata(enemy, options.isTestSpawn ? 'test' : 'normal');
     this.enemies.add(enemy);
+    return enemy;
+  }
+
+  getTestEnemySpawnPoint() {
+    const spawnDistance = Phaser.Math.Between(320, 460);
+    const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+
+    return {
+      x: this.player.x + Math.cos(angle) * spawnDistance,
+      y: this.player.y + Math.sin(angle) * spawnDistance
+    };
+  }
+
+  assignTestSpawnMetadata(target, spawnSource = 'normal') {
+    if (!target) {
+      return;
+    }
+
+    target.spawnSource = spawnSource;
+    target.isTestSpawn = spawnSource === 'test';
+
+    if (target instanceof Enemy) {
+      if (target.isTestSpawn) {
+        this.testModeState.trackedEnemies.add(target);
+      } else {
+        this.testModeState.trackedEnemies.delete(target);
+      }
+      return;
+    }
+
+    if (target instanceof Boss) {
+      if (target.isTestSpawn) {
+        this.testModeState.trackedBosses.add(target);
+      } else {
+        this.testModeState.trackedBosses.delete(target);
+      }
+      return;
+    }
+
+    if (target instanceof BossProjectile) {
+      if (target.isTestSpawn) {
+        this.testModeState.trackedBossProjectiles.add(target);
+      } else {
+        this.testModeState.trackedBossProjectiles.delete(target);
+      }
+    }
+  }
+
+  clearTrackedTestProjectiles() {
+    this.testModeState.trackedBossProjectiles.forEach((projectile) => {
+      if (projectile?.active) {
+        projectile.disableProjectile?.();
+      }
+      projectile.isTestSpawn = false;
+      projectile.spawnSource = 'normal';
+    });
+    this.testModeState.trackedBossProjectiles.clear();
+  }
+
+  clearTrackedTestBosses() {
+    this.testModeState.trackedBosses.forEach((boss) => {
+      if (boss?.active) {
+        boss.deactivate?.();
+      }
+      boss.isTestSpawn = false;
+      boss.spawnSource = 'normal';
+    });
+    this.testModeState.trackedBosses.clear();
+  }
+
+  clearTrackedTestEnemies() {
+    this.testModeState.trackedEnemies.forEach((enemy) => {
+      if (enemy?.active) {
+        enemy.deactivate?.();
+      }
+      enemy.isTestSpawn = false;
+      enemy.spawnSource = 'normal';
+    });
+    this.testModeState.trackedEnemies.clear();
   }
 
   chooseEnemyType() {
@@ -1084,7 +1191,8 @@ export class MainScene extends Phaser.Scene {
           target: this.player,
           tint: 0xa6eeff,
           scale: 1,
-          bodyRadius: 7
+          bodyRadius: 7,
+          spawnSource: boss?.spawnSource ?? 'normal'
         });
 
         bulletsSpawned += 1;
@@ -1101,6 +1209,8 @@ export class MainScene extends Phaser.Scene {
     }
 
     projectile.fire(config);
+    this.assignTestSpawnMetadata(projectile, config.spawnSource ?? 'normal');
+    return projectile;
   }
 
   fireEliteProjectile(enemy, angle) {
@@ -2868,9 +2978,9 @@ export class MainScene extends Phaser.Scene {
     }
 
     if (enemy.isBoss) {
-      this.handleBossDefeat(enemy);
-      this.kills += 1;
-      return true;
+    this.handleBossDefeat(enemy);
+    this.kills += 1;
+    return true;
     }
 
     this.spawnExperienceGem(enemy.x, enemy.y, enemy.experienceValue);
@@ -2880,6 +2990,17 @@ export class MainScene extends Phaser.Scene {
   }
 
   handleBossDefeat(boss) {
+    if (boss?.isTestSpawn) {
+      this.hideBossDashTelegraph();
+      this.bossAlive = false;
+      boss.deactivate();
+      this.testModeState.trackedBosses.delete(boss);
+      this.clearTrackedTestProjectiles();
+      this.restoreTestBossSchedule();
+      this.emitStats(true);
+      return;
+    }
+
     let remainingExp = boss.experienceValue;
 
     while (remainingExp > 0) {
@@ -3764,7 +3885,286 @@ export class MainScene extends Phaser.Scene {
     this.game.events.emit('pause-state-changed', { paused: false });
     this.game.events.emit('level-up-closed');
     this.game.events.emit('game-reset');
+    if (this.testModeState) {
+      this.testModeState.bossScheduleSnapshot = null;
+      this.testModeState.trackedEnemies.clear();
+      this.testModeState.trackedBosses.clear();
+      this.testModeState.trackedBossProjectiles.clear();
+    }
     this.scene.restart();
+  }
+
+  captureTestBossSchedule() {
+    this.testModeState.bossScheduleSnapshot = {
+      bossSpawnFlags: { ...this.bossSpawnFlags },
+      currentBossPhase: this.currentBossPhase,
+      nextBossEligibleAt: this.nextBossEligibleAt,
+      pendingBossPhase: this.pendingBossPhase,
+      bossAlive: this.bossAlive
+    };
+  }
+
+  restoreTestBossSchedule() {
+    const snapshot = this.testModeState?.bossScheduleSnapshot;
+    if (!snapshot) {
+      return;
+    }
+
+    this.bossSpawnFlags = { ...snapshot.bossSpawnFlags };
+    this.currentBossPhase = snapshot.currentBossPhase;
+    this.nextBossEligibleAt = snapshot.nextBossEligibleAt;
+    this.pendingBossPhase = snapshot.pendingBossPhase;
+    this.bossAlive = snapshot.bossAlive;
+    this.testModeState.bossScheduleSnapshot = null;
+  }
+
+  getTestActionBlockReason(actionType) {
+    if (!this.testModeEnabled) {
+      return 'Test mode is disabled.';
+    }
+
+    if (this.isGameOver || this.stageCleared) {
+      return 'Test actions are disabled after the run ends.';
+    }
+
+    if (this.isLevelingUp) {
+      if (
+        actionType === 'set-weapon-level'
+        || actionType === 'set-passive-level'
+        || actionType === 'spawn-boss-phase'
+        || actionType === 'apply-preset'
+      ) {
+        return 'Close the level up menu before using this test action.';
+      }
+    }
+
+    if (this.isPaused) {
+      if (
+        actionType === 'spawn-boss-phase'
+        || actionType === 'apply-preset'
+      ) {
+        return 'Resume the game before using this test action.';
+      }
+    }
+
+    return null;
+  }
+
+  // Test-only entry point for forcing a weapon level without using upgrade roll flow.
+  setWeaponLevel(key, level) {
+    if (!this.testModeEnabled || !WEAPON_DEFS[key] || this.getTestActionBlockReason('set-weapon-level')) {
+      return false;
+    }
+
+    const nextLevel = Phaser.Math.Clamp(Math.floor(level ?? 0), 0, WEAPON_DEFS[key].maxLevel);
+
+    if (nextLevel <= 0) {
+      delete this.ownedWeapons[key];
+    } else {
+      this.ownedWeapons[key] = nextLevel;
+    }
+
+    this.syncWeaponSystems();
+    this.emitStats(true);
+    return true;
+  }
+
+  // Test-only entry point for forcing a passive level without using upgrade roll flow.
+  setPassiveLevel(key, level) {
+    if (!this.testModeEnabled || !PASSIVE_DEFS[key] || this.getTestActionBlockReason('set-passive-level')) {
+      return false;
+    }
+
+    const nextLevel = Phaser.Math.Clamp(Math.floor(level ?? 0), 0, PASSIVE_DEFS[key].maxLevel);
+    const previousMaxHealth = this.player.maxHealth;
+
+    if (nextLevel <= 0) {
+      delete this.passiveLevels[key];
+    } else {
+      this.passiveLevels[key] = nextLevel;
+    }
+
+    this.recalculateDerivedStats();
+
+    if (key === 'max_health' && nextLevel > 0) {
+      const passiveStats = getPassiveLevelData(key, nextLevel);
+      const healthGain = this.player.maxHealth - previousMaxHealth;
+      const healAmount = (passiveStats.healOnGain ?? 0) + Math.max(0, healthGain);
+      this.player.health = Math.min(this.player.maxHealth, this.player.health + healAmount);
+    }
+
+    this.syncWeaponSystems();
+    this.emitStats(true);
+    return true;
+  }
+
+  // Test-only entry point for spawning a specific enemy type via the existing spawn pipeline.
+  spawnTestEnemy(type, count = 1) {
+    if (!this.testModeEnabled || !ENEMY_TYPES[type]) {
+      return 0;
+    }
+
+    const spawnCount = Phaser.Math.Clamp(Math.floor(count ?? 1), 1, 24);
+
+    for (let index = 0; index < spawnCount; index += 1) {
+      const { x, y } = this.getTestEnemySpawnPoint();
+      const enemyConfig = this.buildScaledEnemyConfig(ENEMY_TYPES[type]);
+      this.spawnEnemyFromConfig(enemyConfig, x, y, { isTestSpawn: true });
+    }
+
+    this.emitStats(true);
+    return spawnCount;
+  }
+
+  // Test-only entry point for spawning a specific boss phase via the existing boss spawn flow.
+  spawnBossPhase(phase) {
+    if (!this.testModeEnabled || this.getTestActionBlockReason('spawn-boss-phase')) {
+      return false;
+    }
+
+    const phaseConfig = this.getBossPhaseConfig(Math.floor(phase ?? 0));
+    if (!phaseConfig) {
+      return false;
+    }
+
+    this.bossWarningEvent?.remove(false);
+    this.bossWarningEvent = null;
+    this.pendingBossPhase = null;
+    this.clearTestEnemies();
+    this.captureTestBossSchedule();
+    this.currentBossPhase = phaseConfig.phase;
+    this.bossAlive = true;
+    this.spawnBoss(phaseConfig, { isTestSpawn: true, suppressNormalSpawns: false });
+    this.emitStats(true);
+    return true;
+  }
+
+  // Test-only entry point for clearing only test-spawned entities from the arena.
+  clearTestEnemies() {
+    if (!this.testModeEnabled) {
+      return false;
+    }
+
+    this.clearTrackedTestEnemies();
+    this.clearTrackedTestBosses();
+    this.clearTrackedTestProjectiles();
+    this.hideBossDashTelegraph();
+    this.restoreTestBossSchedule();
+    this.emitStats(true);
+    return true;
+  }
+
+  // Test-only entry point for clearing every active enemy entity from the arena.
+  clearAllEnemies() {
+    if (!this.testModeEnabled) {
+      return false;
+    }
+
+    this.enemies.children.iterate((enemy) => {
+      if (enemy?.active) {
+        enemy.deactivate();
+      }
+      this.assignTestSpawnMetadata(enemy, 'normal');
+    });
+    this.bosses.children.iterate((boss) => {
+      if (boss?.active) {
+        boss.deactivate();
+      }
+      this.assignTestSpawnMetadata(boss, 'normal');
+    });
+    this.bossProjectiles.children.iterate((projectile) => {
+      projectile?.disableProjectile?.();
+      this.assignTestSpawnMetadata(projectile, 'normal');
+    });
+    this.hideBossDashTelegraph();
+    this.bossWarningEvent?.remove(false);
+    this.bossWarningEvent = null;
+    this.bossAlive = false;
+    this.pendingBossPhase = null;
+    this.restoreTestBossSchedule();
+    this.emitStats(true);
+    return true;
+  }
+
+  // Test-only entry point for granting experience via the existing level-up flow.
+  grantTestExperience(amount) {
+    if (!this.testModeEnabled || this.isGameOver || this.stageCleared || this.isLevelingUp) {
+      return false;
+    }
+
+    const value = Math.max(1, Math.floor(amount ?? 0));
+    this.gainExperience(value);
+    return true;
+  }
+
+  // Test-only entry point for granting gold without touching reward table logic.
+  grantTestGold(amount) {
+    if (!this.testModeEnabled || this.isGameOver || this.stageCleared || this.isLevelingUp) {
+      return false;
+    }
+
+    const value = Math.max(1, Math.floor(amount ?? 0));
+    this.gold += value;
+    this.emitStats(true);
+    return true;
+  }
+
+  // Test-only entry point for resetting temporary combat state while keeping the current run alive.
+  resetTestState() {
+    if (!this.testModeEnabled) {
+      return false;
+    }
+
+    this.clearTestEnemies();
+    this.clearEarthspikeLines();
+    this.clearBurningGrounds();
+    this.player.resetState(0, 0);
+    this.player.moveSpeed = this.basePlayerStats.moveSpeed + (this.derivedStats?.moveSpeedBonus ?? 0);
+    this.player.maxHealth = this.basePlayerStats.maxHealth + (this.derivedStats?.maxHealthBonus ?? 0);
+    this.player.health = this.player.maxHealth;
+    this.player.shield = 0;
+    this.emitStats(true);
+    return true;
+  }
+
+  // Test-only entry point for applying a data-driven preset via existing test APIs.
+  applyTestPreset(preset) {
+    if (!this.testModeEnabled || !preset) {
+      return false;
+    }
+
+    if (preset.resetBeforeApply) {
+      this.resetTestState();
+    } else if (preset.clearTestEnemiesBeforeApply) {
+      this.clearTestEnemies();
+    }
+
+    Object.entries(preset.weapons ?? {}).forEach(([key, level]) => {
+      this.setWeaponLevel(key, level);
+    });
+
+    Object.entries(preset.passives ?? {}).forEach(([key, level]) => {
+      this.setPassiveLevel(key, level);
+    });
+
+    if (preset.grantExp) {
+      this.grantTestExperience(preset.grantExp);
+    }
+
+    if (preset.grantGold) {
+      this.grantTestGold(preset.grantGold);
+    }
+
+    if (preset.spawnEnemy?.type) {
+      this.spawnTestEnemy(preset.spawnEnemy.type, preset.spawnEnemy.count ?? 1);
+    }
+
+    if (preset.bossPhase) {
+      this.spawnBossPhase(preset.bossPhase);
+    }
+
+    this.emitStats(true);
+    return true;
   }
 
   emitStats(force = false) {

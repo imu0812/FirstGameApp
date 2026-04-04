@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import { isTestModeEnabled } from '../debug/testModeConfig.js';
+import { TestModePanel } from '../ui/TestModePanel.js';
 
 export class UIScene extends Phaser.Scene {
   constructor() {
@@ -6,6 +8,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   create() {
+    this.testModeEnabled = isTestModeEnabled();
     this.joystickPointerId = null;
     this.joystickMaxDistance = 30;
     this.joystickActivationRadius = 78;
@@ -55,6 +58,8 @@ export class UIScene extends Phaser.Scene {
     this.createGameOverMenu();
     this.createBossWarning();
     this.createObjectiveIndicator();
+    this.testModePanel = this.testModeEnabled ? new TestModePanel(this) : null;
+    this.testModePanel?.create();
 
     this.input.addPointer(2);
     this.input.on('pointerdown', this.handlePointerDown, this);
@@ -95,6 +100,7 @@ export class UIScene extends Phaser.Scene {
     }
 
     this.updateObjectiveIndicator();
+    this.testModePanel?.update();
   }
 
   updateStats(stats) {
@@ -181,6 +187,7 @@ export class UIScene extends Phaser.Scene {
     this.gameOverStats.setPosition(gameSize.width / 2, gameSize.height / 2 - 14);
     this.restartButton.setPosition(gameSize.width / 2, gameSize.height / 2 + 84);
 
+    this.testModePanel?.handleResize(gameSize);
     this.releaseJoystick();
   }
 
@@ -198,6 +205,8 @@ export class UIScene extends Phaser.Scene {
     this.game.events.off('stage-clear', this.showStageClearMenu, this);
     this.game.events.off('boss-warning', this.showBossWarning, this);
     this.game.events.off('game-reset', this.resetOverlays, this);
+    this.testModePanel?.destroy();
+    this.testModePanel = null;
   }
 
   createBossBar() {
