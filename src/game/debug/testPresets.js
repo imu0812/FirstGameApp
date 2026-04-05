@@ -30,6 +30,32 @@ export const TEST_PRESETS = {
     clearTestEnemiesBeforeApply: true,
     bossPhase: 2
   },
+  weapon_frost_totem_max: {
+    name: '冰晶圖騰 Lv5',
+    description: '快速套用冰晶圖騰滿等，確認雙圖騰、pulse 與 shard 行為。',
+    resetBeforeApply: true,
+    weapons: {
+      arc_bolt: 1,
+      frost_totem: 5
+    }
+  },
+  frost_totem_elite_check: {
+    name: '冰晶圖騰 菁英檢查',
+    description: '套用中高等冰晶圖騰並生成菁英射手，方便檢查減速與 freeze buildup。',
+    resetBeforeApply: true,
+    weapons: {
+      arc_bolt: 1,
+      frost_totem: 4
+    },
+    passives: {
+      projectile_count: 2,
+      damage_boost: 2
+    },
+    spawnEnemy: {
+      type: 'elite_ranger',
+      count: 3
+    }
+  },
   clean_reset: {
     name: '清場重置',
     description: '清除測試生成物並將場景重置為乾淨狀態。',
@@ -47,6 +73,7 @@ export const TEST_PRESETS = {
       chain_thunder: 0,
       gale_boomerang: 0,
       vine_turret: 0,
+      frost_totem: 0,
       earthspike_line: 0,
       nova_bloom: 0
     },

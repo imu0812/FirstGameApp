@@ -16,3 +16,14 @@
 
 ```js
 localStorage['phaser-survivor:test-mode'] = 'enabled'
+```
+
+## 編碼備註
+
+- 專案文字檔建議統一使用 UTF-8。
+- VS Code 可在工作區設定中使用 `files.encoding = utf8`，並關閉 `files.autoGuessEncoding`，避免誤判編碼。
+- 若在 PowerShell 中查看中文檔案時出現假性亂碼，可先設定：
+
+```powershell
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+```

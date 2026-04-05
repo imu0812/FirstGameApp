@@ -53,6 +53,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.slowMultiplier = 1;
     this.slowUntil = 0;
     this.frozenUntil = 0;
+    this.freezeBuildup = 0;
+    this.freezeBuildupDecayDelay = 0;
     this.burnUntil = 0;
     this.burnTickDamage = 0;
     this.burnTickInterval = 500;
@@ -147,6 +149,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     if (time >= this.slowUntil) {
       this.slowMultiplier = 1;
+    }
+
+    if (this.freezeBuildup > 0 && time >= this.freezeBuildupDecayDelay && time >= this.frozenUntil) {
+      this.freezeBuildup = Math.max(0, this.freezeBuildup - (this.isElite ? 0.08 : 0.11) * (time - this.freezeBuildupDecayDelay));
+      this.freezeBuildupDecayDelay = time;
     }
 
     this.refreshStatusTint(time);
@@ -290,6 +297,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     const slowMultiplier = Phaser.Math.Clamp(effect.slowMultiplier ?? 1, 0.2, 1);
     const slowDuration = effect.slowDuration ?? 0;
     const freezeDuration = effect.freezeDuration ?? 0;
+    const freezeBuildup = effect.freezeBuildup ?? 0;
 
     if (slowDuration > 0 && slowMultiplier < this.slowMultiplier) {
       this.slowMultiplier = slowMultiplier;
@@ -300,12 +308,30 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     if (freezeDuration > 0) {
-      this.frozenUntil = Math.max(this.frozenUntil, time + freezeDuration);
-      this.setVelocity(0, 0);
-      this.setTint(0xbfe8ff);
-      this.freezeOutline.setPosition(this.x, this.y);
-      this.freezeOutline.setVisible(true);
-      return;
+      let appliedFreezeDuration = freezeDuration;
+
+      if (freezeBuildup > 0) {
+        const buildupMultiplier = this.isElite ? 0.72 : 1;
+        const threshold = this.isElite ? 140 : 100;
+        this.freezeBuildup = Math.min(threshold, this.freezeBuildup + freezeBuildup * buildupMultiplier);
+        this.freezeBuildupDecayDelay = time + 900;
+
+        if (this.freezeBuildup >= threshold) {
+          appliedFreezeDuration = this.isElite ? Math.floor(freezeDuration * 0.58) : freezeDuration;
+          this.freezeBuildup = this.isElite ? 46 : 0;
+        } else {
+          appliedFreezeDuration = 0;
+        }
+      }
+
+      if (appliedFreezeDuration > 0) {
+        this.frozenUntil = Math.max(this.frozenUntil, time + appliedFreezeDuration);
+        this.setVelocity(0, 0);
+        this.setTint(0xbfe8ff);
+        this.freezeOutline.setPosition(this.x, this.y);
+        this.freezeOutline.setVisible(true);
+        return;
+      }
     }
 
     this.refreshStatusTint(time);
@@ -417,6 +443,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.slowMultiplier = 1;
     this.slowUntil = 0;
     this.frozenUntil = 0;
+    this.freezeBuildup = 0;
+    this.freezeBuildupDecayDelay = 0;
     this.clearBurn();
     this.clearPoison();
     this.corrosionUntil = 0;

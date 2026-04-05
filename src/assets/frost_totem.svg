@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="frost totem icon">
+  <defs>
+    <linearGradient id="bgGlow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#e9fbff" stop-opacity="0.0"/>
+      <stop offset="100%" stop-color="#79e7ff" stop-opacity="0.25"/>
+    </linearGradient>
+    <linearGradient id="crystalMain" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f4ffff"/>
+      <stop offset="40%" stop-color="#c9f3ff"/>
+      <stop offset="100%" stop-color="#63cfff"/>
+    </linearGradient>
+    <linearGradient id="crystalSide" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#d6fbff"/>
+      <stop offset="100%" stop-color="#3ca7eb"/>
+    </linearGradient>
+    <linearGradient id="baseStone" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#5e7ca6"/>
+      <stop offset="100%" stop-color="#263a57"/>
+    </linearGradient>
+    <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="7" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="1 0 0 0 0  0 1 0 0 0.8  0 0 1 0 1  0 0 0 0.85 0" result="glow"/>
+      <feMerge>
+        <feMergeNode in="glow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="8" stdDeviation="7" flood-color="#0b1830" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <!-- ambient glow -->
+  <ellipse cx="128" cy="126" rx="88" ry="92" fill="url(#bgGlow)"/>
+  <ellipse cx="128" cy="200" rx="66" ry="18" fill="#8aeaff" opacity="0.22"/>
+
+  <!-- icy aura shards -->
+  <g fill="#baf5ff" opacity="0.85" filter="url(#softGlow)">
+    <path d="M56 112l10-20 10 20-10 6z"/>
+    <path d="M198 102l12-18 8 20-10 6z"/>
+    <path d="M72 162l8-14 7 15-8 4z"/>
+    <path d="M184 156l9-14 7 15-8 5z"/>
+  </g>
+
+  <!-- base -->
+  <g filter="url(#shadow)">
+    <path d="M82 194l20-24h52l20 24-13 18H95z" fill="url(#baseStone)"/>
+    <path d="M92 196l12-14h48l12 14-8 10H100z" fill="#3d587f" opacity="0.8"/>
+    <path d="M104 176h48l10 12h-68z" fill="#89b6da" opacity="0.35"/>
+  </g>
+
+  <!-- totem body -->
+  <g filter="url(#shadow)">
+    <path d="M114 168l-10-18 10-44h28l10 44-10 18z" fill="url(#crystalSide)"/>
+    <path d="M128 46l26 56-8 8h-36l-8-8z" fill="url(#crystalMain)"/>
+    <path d="M128 46l-14 64h28z" fill="#ecffff" opacity="0.9"/>
+    <path d="M100 110l28 58 28-58z" fill="#74d9ff" opacity="0.8"/>
+    <path d="M113 105h30l5 43-20 26-20-26z" fill="#58bff8" opacity="0.75"/>
+    <path d="M128 60l10 27-10 8-10-8z" fill="#ffffff" opacity="0.95"/>
+  </g>
+
+  <!-- runic snowflake -->
+  <g stroke="#ebfeff" stroke-width="6" stroke-linecap="round" filter="url(#softGlow)">
+    <path d="M128 110v34"/>
+    <path d="M111 127h34"/>
+    <path d="M116 116l24 24"/>
+    <path d="M140 116l-24 24"/>
+  </g>
+  <g stroke="#9af1ff" stroke-width="4" stroke-linecap="round" opacity="0.95">
+    <path d="M128 107l-5 7"/>
+    <path d="M128 107l5 7"/>
+    <path d="M128 147l-5-7"/>
+    <path d="M128 147l5-7"/>
+    <path d="M109 127l7-5"/>
+    <path d="M109 127l7 5"/>
+    <path d="M147 127l-7-5"/>
+    <path d="M147 127l-7 5"/>
+  </g>
+
+  <!-- crown shards -->
+  <g filter="url(#softGlow)">
+    <path d="M92 104l18-18 5 14-10 14z" fill="#b8fbff" opacity="0.85"/>
+    <path d="M164 86l18 18-13 10-10-14z" fill="#b8fbff" opacity="0.85"/>
+    <path d="M128 24l12 20-12 12-12-12z" fill="#dffeff" opacity="0.95"/>
+  </g>
+
+  <!-- highlights -->
+  <path d="M121 62l-10 41" stroke="#ffffff" stroke-width="5" stroke-linecap="round" opacity="0.75"/>
+  <path d="M108 116l12 40" stroke="#d9fbff" stroke-width="4" stroke-linecap="round" opacity="0.5"/>
+</svg>

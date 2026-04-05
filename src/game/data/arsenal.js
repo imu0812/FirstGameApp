@@ -49,6 +49,23 @@ export const WEAPON_DEFS = {
       { range: 440, damage: 5, cooldown: 900, projectiles: 3, speed: 590, lifeSpan: 1320, spread: 0.18, pierce: 3, slowMultiplier: 0.4, slowDuration: 2200, freezeDuration: 1500, tint: 0xe1fbff, scale: 1.12 }
     ]
   },
+  frost_totem: {
+    key: 'frost_totem',
+    iconKey: 'frost_totem_icon',
+    projectileKey: 'frost_totem_body',
+    name: '冰晶圖騰',
+    category: 'weapon',
+    type: 'summon_totem',
+    maxLevel: 5,
+    unlockDescription: '在場上豎立冰晶圖騰，週期性脈衝減速敵人，並可額外發射冰晶碎片。',
+    levels: [
+      { cooldown: 7200, damage: 0, summonCount: 1, summonDuration: 8000, pulseInterval: 1600, pulseRadius: 72, slowMultiplier: 0.8, slowDuration: 1700, freezeBuildup: 32, freezeDuration: 420, tint: 0xa9efff, scale: 0.96, pulseScale: 1.1, shardCount: 0, shardDamage: 0, shardSpeed: 350, shardLifeSpan: 880, shardTexture: 'frost_totem_shard_placeholder', shardTint: 0xd7f9ff, shardScale: 0.74, shardBodyRadius: 6, shardRange: 240 },
+      { cooldown: 7000, damage: 0, summonCount: 1, summonDuration: 8000, pulseInterval: 1600, pulseRadius: 92, slowMultiplier: 0.76, slowDuration: 1800, freezeBuildup: 40, freezeDuration: 520, tint: 0xb8f4ff, scale: 0.98, pulseScale: 1.22, shardCount: 0, shardDamage: 0, shardSpeed: 360, shardLifeSpan: 920, shardTexture: 'frost_totem_shard_placeholder', shardTint: 0xe0fbff, shardScale: 0.76, shardBodyRadius: 6, shardRange: 255 },
+      { cooldown: 6600, damage: 1, summonCount: 1, summonDuration: 8200, pulseInterval: 1600, pulseRadius: 92, slowMultiplier: 0.76, slowDuration: 1900, freezeBuildup: 50, freezeDuration: 620, tint: 0xc6f8ff, scale: 1, pulseScale: 1.28, shardCount: 3, shardDamage: 2, shardSpeed: 380, shardLifeSpan: 980, shardTexture: 'frost_totem_shard_placeholder', shardTint: 0xe6fdff, shardScale: 0.8, shardBodyRadius: 6, shardRange: 270 },
+      { cooldown: 6200, damage: 1, summonCount: 1, summonDuration: 8400, pulseInterval: 1600, pulseRadius: 96, slowMultiplier: 0.72, slowDuration: 2000, freezeBuildup: 72, freezeDuration: 980, tint: 0xd6fbff, scale: 1.02, pulseScale: 1.34, shardCount: 4, shardDamage: 2.5, shardSpeed: 420, shardLifeSpan: 1080, shardTexture: 'frost_totem_shard_placeholder', shardTint: 0xf2ffff, shardScale: 0.84, shardBodyRadius: 6, shardRange: 285 },
+      { cooldown: 6200, damage: 1.5, summonCount: 2, summonDuration: 8600, pulseInterval: 1600, pulseRadius: 100, slowMultiplier: 0.72, slowDuration: 2200, freezeBuildup: 84, freezeDuration: 1100, tint: 0xebffff, scale: 1.04, pulseScale: 1.4, shardCount: 4, shardDamage: 3, shardSpeed: 440, shardLifeSpan: 1140, shardTexture: 'frost_totem_shard_placeholder', shardTint: 0xffffff, shardScale: 0.88, shardBodyRadius: 6, shardRange: 300 }
+    ]
+  },
   flame_orb: {
     key: 'flame_orb',
     iconKey: 'flame_orb_icon',

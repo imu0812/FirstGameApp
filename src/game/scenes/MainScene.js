@@ -9,6 +9,7 @@ import { OrbitingBlade } from '../entities/OrbitingBlade.js';
 import { Chest } from '../entities/Chest.js';
 import { ChestRewardDrop } from '../entities/ChestRewardDrop.js';
 import { VineTurret } from '../entities/VineTurret.js';
+import { FrostTotem } from '../entities/FrostTotem.js';
 import { BOSS_PHASES, DIFFICULTY_STAGES, ENEMY_BALANCE, ENEMY_TYPES } from '../data/enemyTypes.js';
 import {
   PASSIVE_DEFS,
@@ -49,6 +50,7 @@ const SKILL_AUDIO_CONFIG = {
   comet_lance_hit_sfx: { volume: 0.16, minInterval: 55 },
   flame_orb_cast_sfx: { volume: 0.2, minInterval: 120 },
   flame_orb_explode_sfx: { volume: 0.2, minInterval: 85 },
+  frost_totem_cast_sfx: { volume: 0.18, minInterval: 120 },
   gale_boomerang_throw_sfx: { volume: 0.18, minInterval: 100 },
   gale_boomerang_return_hit_sfx: { volume: 0.15, minInterval: 65 },
   halo_disc_hit_sfx: { volume: 0.12, minInterval: 90 },
@@ -157,6 +159,10 @@ export class MainScene extends Phaser.Scene {
     });
     this.vineTurrets = this.physics.add.group({
       classType: VineTurret,
+      maxSize: 6
+    });
+    this.frostTotems = this.physics.add.group({
+      classType: FrostTotem,
       maxSize: 6
     });
     this.chests = this.physics.add.group({
@@ -292,6 +298,7 @@ export class MainScene extends Phaser.Scene {
 
     this.updateOrbitWeapons();
     this.updateVineTurrets(now);
+    this.updateFrostTotems(now);
     this.updateBurningGrounds(now);
     this.updateEarthspikeLines(now);
     this.updateMagnetizedGems();
@@ -319,6 +326,7 @@ export class MainScene extends Phaser.Scene {
     this.bossWarningEvent?.remove(false);
     this.hideBossDashTelegraph();
     this.clearEarthspikeLines();
+    this.clearFrostTotems();
     this.debugHitboxGraphics?.clear();
     this.debugHitboxGraphics?.destroy();
   }
@@ -631,8 +639,12 @@ export class MainScene extends Phaser.Scene {
       projectiles: (baseStats.projectiles ?? 0) + this.derivedStats.projectileBonus,
       count: (baseStats.count ?? 0) + this.derivedStats.projectileBonus,
       summonCount: baseStats.summonCount ?? 0,
+      shardCount: (baseStats.shardCount ?? 0) + this.derivedStats.projectileBonus,
       projectileSpeed: baseStats.projectileSpeed
         ? Math.round(baseStats.projectileSpeed * this.derivedStats.projectileSpeedMultiplier * 100) / 100
+        : undefined,
+      shardSpeed: baseStats.shardSpeed
+        ? Math.round(baseStats.shardSpeed * this.derivedStats.projectileSpeedMultiplier * 100) / 100
         : undefined,
       burnDamage: baseStats.burnDamage
         ? Math.max(0.5, Math.round(baseStats.burnDamage * this.derivedStats.damageMultiplier * 100) / 100)
@@ -1375,6 +1387,7 @@ export class MainScene extends Phaser.Scene {
     this.refreshWeaponTimers();
     this.syncOrbitBlades();
     this.syncVineTurrets();
+    this.syncFrostTotems();
   }
 
   refreshWeaponTimers() {
@@ -1430,6 +1443,10 @@ export class MainScene extends Phaser.Scene {
 
     if (weaponKey === 'vine_turret') {
       this.syncVineTurrets();
+    }
+
+    if (weaponKey === 'frost_totem') {
+      this.syncFrostTotems();
     }
 
     if (weaponKey === 'earthspike_line') {
@@ -1774,6 +1791,281 @@ export class MainScene extends Phaser.Scene {
       sourceWeaponKey: 'vine_turret',
       statusEffect: turret.statusEffect,
       rotationOffset: 0
+    });
+  }
+
+  syncFrostTotems() {
+    const totemLevel = this.ownedWeapons.frost_totem ?? 0;
+
+    if (totemLevel <= 0) {
+      this.clearFrostTotems();
+      return;
+    }
+
+    const stats = this.getWeaponStats('frost_totem');
+    const maxActiveTotems = Math.max(1, Math.min(3, stats.summonCount ?? 1));
+    const activeTotems = [];
+
+    this.frostTotems.children.iterate((totem) => {
+      if (totem?.active) {
+        activeTotems.push(totem);
+      }
+    });
+
+    activeTotems.sort((left, right) => (left.createdAt ?? 0) - (right.createdAt ?? 0));
+
+    while (activeTotems.length > maxActiveTotems) {
+      const oldestTotem = activeTotems.shift();
+      oldestTotem?.deactivate?.();
+    }
+
+    activeTotems.forEach((totem) => {
+      if (!totem?.active) {
+        return;
+      }
+
+      totem.level = totemLevel;
+      totem.pulseInterval = stats.pulseInterval ?? 1600;
+      totem.pulseRadius = stats.pulseRadius ?? 72;
+      totem.pulseDamage = stats.damage ?? 0;
+      totem.statusEffect = {
+        slowMultiplier: stats.slowMultiplier ?? 1,
+        slowDuration: stats.slowDuration ?? 0,
+        freezeBuildup: stats.freezeBuildup ?? 0,
+        freezeDuration: stats.freezeDuration ?? 0
+      };
+      totem.shardConfig = (stats.shardCount ?? 0) > 0 ? {
+        count: stats.shardCount,
+        damage: stats.shardDamage ?? 0,
+        speed: stats.shardSpeed ?? 380,
+        lifeSpan: stats.shardLifeSpan ?? 980,
+        range: stats.shardRange ?? 260,
+        texture: stats.shardTexture ?? 'frost_totem_shard_placeholder',
+        tint: stats.shardTint ?? 0xe6fdff,
+        scale: stats.shardScale ?? 0.8,
+        bodyRadius: stats.shardBodyRadius ?? 6,
+        freezeBuildup: Math.max(12, Math.round((stats.freezeBuildup ?? 0) * 0.45))
+      } : null;
+      totem.summonDuration = stats.summonDuration ?? 8000;
+      totem.setTint(stats.tint ?? 0xffffff);
+      totem.baseScale = stats.scale ?? 1;
+      totem.setScale(totem.baseScale);
+    });
+
+    if (activeTotems.length >= maxActiveTotems) {
+      return;
+    }
+
+    let totem = this.frostTotems.getFirstDead(false);
+
+    if (!totem) {
+      totem = new FrostTotem(this, this.player.x, this.player.y);
+      this.frostTotems.add(totem);
+    }
+
+    const summonPoint = this.getFrostTotemSummonPoint(activeTotems.length, maxActiveTotems, stats.pulseRadius ?? 72);
+    totem.configure({
+      owner: this.player,
+      level: totemLevel,
+      summonDuration: stats.summonDuration ?? 8000,
+      pulseInterval: stats.pulseInterval ?? 1600,
+      pulseRadius: stats.pulseRadius ?? 72,
+      pulseDamage: stats.damage ?? 0,
+      statusEffect: {
+        slowMultiplier: stats.slowMultiplier ?? 1,
+        slowDuration: stats.slowDuration ?? 0,
+        freezeBuildup: stats.freezeBuildup ?? 0,
+        freezeDuration: stats.freezeDuration ?? 0
+      },
+      shardConfig: (stats.shardCount ?? 0) > 0 ? {
+        count: stats.shardCount,
+        damage: stats.shardDamage ?? 0,
+        speed: stats.shardSpeed ?? 380,
+        lifeSpan: stats.shardLifeSpan ?? 980,
+        range: stats.shardRange ?? 260,
+        texture: stats.shardTexture ?? 'frost_totem_shard_placeholder',
+        tint: stats.shardTint ?? 0xe6fdff,
+        scale: stats.shardScale ?? 0.8,
+        bodyRadius: stats.shardBodyRadius ?? 6,
+        freezeBuildup: Math.max(12, Math.round((stats.freezeBuildup ?? 0) * 0.45))
+      } : null,
+      tint: stats.tint ?? 0xffffff,
+      scale: stats.scale ?? 1
+    }, summonPoint.x, summonPoint.y, Math.min(380, activeTotems.length * 140));
+    this.createFrostTotemSummonEffect(summonPoint.x, summonPoint.y, stats.pulseRadius ?? 72);
+  }
+
+  clearFrostTotems() {
+    this.frostTotems?.children?.iterate((totem) => totem?.deactivate?.());
+  }
+
+  getFrostTotemSummonPoint(index, total, radius = 72) {
+    const spacing = Math.max(72, radius * 0.95);
+    const angleBase = -Math.PI / 2;
+    const angleStep = total <= 1 ? 0 : 0.52;
+    const angle = angleBase + (index - (total - 1) / 2) * angleStep;
+    const distance = 72 + index * 18;
+    const clampedX = Phaser.Math.Clamp(this.player.x + Math.cos(angle) * distance, -this.worldSize.width * 0.48, this.worldSize.width * 0.48);
+    const clampedY = Phaser.Math.Clamp(this.player.y + Math.sin(angle) * distance, -this.worldSize.height * 0.48, this.worldSize.height * 0.48);
+
+    return {
+      x: clampedX,
+      y: clampedY + Math.min(18, spacing * 0.06)
+    };
+  }
+
+  updateFrostTotems(time = this.time.now) {
+    if (!this.player?.active) {
+      return;
+    }
+
+    this.frostTotems.children.iterate((totem) => {
+      if (!totem?.active) {
+        return;
+      }
+
+      totem.updateTotem(time, (currentTotem, pulseTime) => this.triggerFrostTotemPulse(currentTotem, pulseTime));
+    });
+  }
+
+  triggerFrostTotemPulse(totem, time = this.time.now) {
+    if (!totem?.active) {
+      return;
+    }
+
+    const radius = totem.pulseRadius ?? 72;
+    const radiusSq = radius * radius;
+    let targetDied = false;
+
+    this.playSkillAudio('frost_totem_cast_sfx');
+    this.createFrostTotemPulseEffect(totem.x, totem.y, radius);
+
+    const inspectTarget = (target) => {
+      if (!target?.active) {
+        return;
+      }
+
+      const dx = target.x - totem.x;
+      const dy = target.y - totem.y;
+
+      if (dx * dx + dy * dy > radiusSq) {
+        return;
+      }
+
+      let localTargetDied = false;
+
+      if ((totem.pulseDamage ?? 0) > 0) {
+        localTargetDied = this.damageEnemy(target, totem.pulseDamage);
+        targetDied = localTargetDied || targetDied;
+      }
+
+      if (!localTargetDied && target?.active) {
+        target.applyChill?.(totem.statusEffect, time);
+      }
+    };
+
+    this.bosses.children.iterate(inspectTarget);
+    this.enemies.children.iterate(inspectTarget);
+
+    if (totem.active && totem.shardConfig && (totem.shardConfig.count ?? 0) > 0) {
+      this.fireFrostTotemShards(totem, totem.shardConfig);
+    }
+
+    if (targetDied) {
+      this.emitStats(true);
+    }
+  }
+
+  fireFrostTotemShards(totem, shardConfig) {
+    const nearestTarget = this.findNearestEnemy(shardConfig.range ?? 260);
+    const shardTargets = this.findChainTargets(
+      totem.x,
+      totem.y,
+      shardConfig.range ?? 260,
+      new Set(),
+      Math.max(1, shardConfig.count ?? 1)
+    );
+    const fallbackAngleBase = nearestTarget
+      ? Phaser.Math.Angle.Between(totem.x, totem.y, nearestTarget.x, nearestTarget.y)
+      : this.player.moveDirection.lengthSq() > 0.0001
+        ? this.player.moveDirection.angle()
+        : -Math.PI / 2;
+    const shardCount = Math.max(1, shardConfig.count ?? 1);
+
+    for (let index = 0; index < shardCount; index += 1) {
+      const target = shardTargets[index % Math.max(1, shardTargets.length)] ?? null;
+      const spreadOffset = shardCount === 1 ? 0 : (index - (shardCount - 1) / 2) * 0.24;
+      const angle = target?.active
+        ? Phaser.Math.Angle.Between(totem.x, totem.y, target.x, target.y)
+        : fallbackAngleBase + spreadOffset;
+
+      this.spawnProjectile({
+        x: totem.x,
+        y: totem.y - 8,
+        angle,
+        speed: shardConfig.speed ?? 380,
+        lifeSpan: shardConfig.lifeSpan ?? 980,
+        damage: shardConfig.damage ?? 2,
+        pierce: 0,
+        tint: shardConfig.tint ?? 0xe6fdff,
+        scale: shardConfig.scale ?? 0.8,
+        texture: shardConfig.texture ?? 'frost_totem_shard_placeholder',
+        bodyRadius: shardConfig.bodyRadius ?? 6,
+        sourceWeaponKey: 'frost_totem',
+        statusEffect: {
+          slowMultiplier: 0.9,
+          slowDuration: 900,
+          freezeBuildup: shardConfig.freezeBuildup ?? 18,
+          freezeDuration: 480
+        },
+        rotationOffset: Math.PI / 4
+      });
+    }
+  }
+
+  createFrostTotemSummonEffect(x, y, radius = 72) {
+    const ring = this.add.circle(x, y + 6, Math.max(18, radius * 0.22), 0x9defff, 0.16).setDepth(1.9);
+
+    this.tweens.add({
+      targets: ring,
+      alpha: 0,
+      scaleX: 2.2,
+      scaleY: 1.4,
+      duration: 320,
+      ease: 'Cubic.Out',
+      onComplete: () => ring.destroy()
+    });
+  }
+
+  createFrostTotemPulseEffect(x, y, radius) {
+    if (this.textures.exists('frost_totem_pulse')) {
+      const burst = this.add.image(x, y, 'frost_totem_pulse').setDepth(2.9);
+      burst.setAlpha(0.86);
+      burst.setDisplaySize(radius * 2.1, radius * 2.1);
+      burst.setBlendMode(Phaser.BlendModes.ADD);
+
+      this.tweens.add({
+        targets: burst,
+        alpha: 0,
+        scaleX: 2.25,
+        scaleY: 2.25,
+        duration: 280,
+        ease: 'Cubic.Out',
+        onComplete: () => burst.destroy()
+      });
+      return;
+    }
+
+    const ring = this.add.circle(x, y, Math.max(18, radius * 0.45), 0xbcefff, 0.14).setDepth(2.9);
+    ring.setStrokeStyle(3, 0xe9ffff, 0.55);
+    this.tweens.add({
+      targets: ring,
+      alpha: 0,
+      scaleX: 1.8,
+      scaleY: 1.8,
+      duration: 260,
+      ease: 'Cubic.Out',
+      onComplete: () => ring.destroy()
     });
   }
 
@@ -3586,6 +3878,15 @@ export class MainScene extends Phaser.Scene {
       return parts.join(' ');
     }
 
+    if (def.type === 'summon_totem') {
+      const parts = [`台${stats.summonCount}`, `脈${this.formatSeconds(stats.pulseInterval)}`, `域${stats.pulseRadius}`];
+      parts.push(`緩${Math.round((1 - stats.slowMultiplier) * 100)}%`);
+      if ((stats.shardCount ?? 0) > 0) {
+        parts.push(`晶${stats.shardCount}`);
+      }
+      return parts.join(' ');
+    }
+
     if (def.type === 'ground_line') {
       const parts = [`傷${stats.damage}`, `段${stats.segments}`, `寬${stats.width}`, `射${stats.range}`];
       if (stats.telegraphLeadTime) {
@@ -3702,6 +4003,12 @@ export class MainScene extends Phaser.Scene {
       const durationText = stats.summonDuration ? ` | \u6301\u7e8c ${Math.round(stats.summonDuration / 100) / 10}\u79d2` : '';
       const cooldownText = stats.cooldown ? ` | \u51b7\u537b ${Math.round(stats.cooldown / 100) / 10}\u79d2` : '';
       return `${intro}\u50b7\u5bb3 ${stats.damage} | \u7832\u53f0 ${stats.summonCount}${durationText}${cooldownText}${poisonText}${splashText}`;
+    }
+
+    if (def.type === 'summon_totem') {
+      const shardText = stats.shardCount > 0 ? ` | \u788e\u6676 ${stats.shardCount}` : '';
+      const durationText = stats.summonDuration ? ` | \u6301\u7e8c ${Math.round(stats.summonDuration / 100) / 10}\u79d2` : '';
+      return `${intro}\u5716\u9a30 ${stats.summonCount} | \u8108\u885d ${Math.round((stats.pulseInterval ?? 0) / 100) / 10}\u79d2 | \u7de9\u901f ${Math.round((1 - stats.slowMultiplier) * 100)}% | \u534a\u5f91 ${stats.pulseRadius}${durationText}${shardText}`;
     }
 
     if (def.type === 'ground_line') {

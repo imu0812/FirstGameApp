@@ -76,6 +76,8 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     this.state = 'idle';
     this.slowMultiplier = 1;
     this.slowUntil = 0;
+    this.freezeBuildup = 0;
+    this.freezeBuildupDecayDelay = 0;
     this.burnUntil = 0;
     this.burnTickDamage = 0;
     this.burnTickInterval = 500;
@@ -140,6 +142,11 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
 
     if (time >= this.slowUntil) {
       this.slowMultiplier = 1;
+    }
+
+    if (this.freezeBuildup > 0 && time >= this.freezeBuildupDecayDelay) {
+      this.freezeBuildup = Math.max(0, this.freezeBuildup - 0.045 * (time - this.freezeBuildupDecayDelay));
+      this.freezeBuildupDecayDelay = time;
     }
 
     this.updateStatusVisuals(time);
@@ -287,9 +294,20 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
   applyChill(effect = {}, time = 0) {
     const slowMultiplier = Phaser.Math.Clamp(effect.slowMultiplier ?? 1, 0.7, 1);
     const slowDuration = effect.slowDuration ?? 0;
+    const freezeBuildup = effect.freezeBuildup ?? 0;
 
-    if (slowDuration > 0 && slowMultiplier < this.slowMultiplier) {
-      this.slowMultiplier = slowMultiplier;
+    let appliedSlowMultiplier = slowMultiplier;
+
+    if (freezeBuildup > 0) {
+      this.freezeBuildup = Math.min(220, this.freezeBuildup + freezeBuildup * 0.45);
+      this.freezeBuildupDecayDelay = time + 1100;
+      const buildupRatio = this.freezeBuildup / 220;
+      const extraSlow = Phaser.Math.Linear(0, 0.14, buildupRatio);
+      appliedSlowMultiplier = Math.max(0.74, slowMultiplier - extraSlow);
+    }
+
+    if (slowDuration > 0 && appliedSlowMultiplier < this.slowMultiplier) {
+      this.slowMultiplier = appliedSlowMultiplier;
       this.slowUntil = Math.max(this.slowUntil, time + Math.floor(slowDuration * 0.5));
     }
 
@@ -395,6 +413,8 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     this.state = 'idle';
     this.slowMultiplier = 1;
     this.slowUntil = 0;
+    this.freezeBuildup = 0;
+    this.freezeBuildupDecayDelay = 0;
     this.clearBurn();
     this.clearPoison();
     this.dashAngle = 0;
