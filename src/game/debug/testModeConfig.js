@@ -1,4 +1,5 @@
-// Test mode is available in development builds only.
+// Test mode is available in local development builds, or in
+// explicitly flagged deployed builds.
 // Enable it with `?testMode=1` in the URL, or set
 // `localStorage['phaser-survivor:test-mode'] = 'enabled'`.
 export const TEST_MODE_EVENTS = {
@@ -6,8 +7,16 @@ export const TEST_MODE_EVENTS = {
   feedback: 'test-mode:feedback'
 };
 
+function isTestModeBuildAllowed() {
+  if (import.meta.env.DEV) {
+    return true;
+  }
+
+  return import.meta.env.VITE_ENABLE_TEST_MODE === 'true';
+}
+
 export function isTestModeEnabled() {
-  if (!import.meta.env.DEV) {
+  if (!isTestModeBuildAllowed()) {
     return false;
   }
 
