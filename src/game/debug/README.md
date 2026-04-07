@@ -23,14 +23,62 @@ localStorage['phaser-survivor:test-mode'] = 'enabled'
 
 ## Dev 部署開法
 
-在 dev／測試站打包時，加入環境變數：
+本機開發時會自動讀取 `.env.development`。
+
+正式打包時會自動讀取 `.env.production`。
+
+若要打 dev／測試站版本，可使用 `.env.staging` 搭配：
 
 ```powershell
-$env:VITE_ENABLE_TEST_MODE="true"
-npm run build
+npm run build:staging
 ```
 
-未設定 `VITE_ENABLE_TEST_MODE=true` 的正式 build，即使加上 `?testMode=1` 也不會啟用。
+目前預設為：
+
+- `.env.development` -> `VITE_ENABLE_TEST_MODE=true`
+- `.env.staging` -> `VITE_ENABLE_TEST_MODE=true`
+- `.env.production` -> `VITE_ENABLE_TEST_MODE=false`
+
+因此正式 production build 即使加上 `?testMode=1` 也不會啟用。
+
+## GitHub Pages 部署切換
+
+專案的 GitHub Actions Pages workflow 支援兩種部署模式：
+
+- `production`
+- `staging`
+
+### 自動部署
+
+- `push` 到 `main` 時，會自動部署 `production`
+
+### 手動切到 staging
+
+1. 到 GitHub repository 的 `Actions`
+2. 選 `Deploy to GitHub Pages`
+3. 點 `Run workflow`
+4. 將 `deploy_mode` 設成 `staging`
+5. 執行 workflow，等待部署完成
+
+部署完成後，可用以下網址開啟測試模式：
+
+```text
+https://imu0812.github.io/FirstGameApp/?testMode=1
+```
+
+### 切回 production
+
+若 staging 已經部署到 GitHub Pages，想切回正式版時：
+
+1. 到 `Actions`
+2. 再次執行 `Deploy to GitHub Pages`
+3. 將 `deploy_mode` 設成 `production`
+
+### 注意
+
+- GitHub Pages 同一時間只會提供一份目前部署的內容
+- 手動部署 `staging` 會暫時覆蓋目前的 production 頁面
+- 再部署一次 `production` 才會切回正式站內容
 
 ## 編碼備註
 
