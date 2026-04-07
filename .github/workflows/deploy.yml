@@ -26,8 +26,6 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      DEPLOY_MODE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_mode || 'production' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -42,26 +40,42 @@ jobs:
         run: npm ci
 
       - name: Show deploy mode
-        run: echo "Deploy mode: $DEPLOY_MODE"
-
-      - name: Build
+        if: github.event_name == 'workflow_dispatch'
         run: |
-          if [ "$DEPLOY_MODE" = "staging" ]; then
-            npm run build:staging
-          else
-            npm run build
-          fi
+          echo "Deploy mode: ${{ github.event.inputs.deploy_mode }}"
+
+      - name: Show deploy mode
+        if: github.event_name != 'workflow_dispatch'
+        run: |
+          echo "Deploy mode: production"
+
+      - name: Build production
+        if: github.event_name != 'workflow_dispatch' || github.event.inputs.deploy_mode == 'production'
+        run: npm run build
+
+      - name: Build staging
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_mode == 'staging'
+        run: npm run build:staging
 
       - name: Summarize deploy target
+        if: github.event_name == 'workflow_dispatch'
         run: |
           echo "## GitHub Pages Deploy" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Mode: $DEPLOY_MODE" >> "$GITHUB_STEP_SUMMARY"
-          if [ "$DEPLOY_MODE" = "staging" ]; then
+          echo "- Mode: ${{ github.event.inputs.deploy_mode }}" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ github.event.inputs.deploy_mode }}" = "staging" ]; then
             echo "- Test mode build flag: enabled" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "- Test mode build flag: disabled" >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      - name: Summarize deploy target
+        if: github.event_name != 'workflow_dispatch'
+        run: |
+          echo "## GitHub Pages Deploy" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Mode: production" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Test mode build flag: disabled" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
