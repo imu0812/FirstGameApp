@@ -382,7 +382,7 @@ export class MainScene extends Phaser.Scene {
   createPlayerStatusBar() {
     this.playerBarWidth = 46;
     this.playerBarInnerWidth = this.playerBarWidth - 4;
-    this.playerBarContainer = this.add.container(this.player.x, this.player.y - 30);
+    this.playerBarContainer = this.add.container(this.player.x, this.player.y - 46);
     this.playerBarContainer.setDepth(12);
 
     this.playerBarBackground = this.add.rectangle(0, 0, this.playerBarWidth, 10, 0x071018, 0.76).setOrigin(0.5);
@@ -405,7 +405,7 @@ export class MainScene extends Phaser.Scene {
       return;
     }
 
-    this.playerBarContainer.setPosition(this.player.x, this.player.y - 30);
+    this.playerBarContainer.setPosition(this.player.x, this.player.y - 46);
 
     const hpRatio = Phaser.Math.Clamp(this.player.health / Math.max(1, this.player.maxHealth), 0, 1);
     const shieldRatio = Phaser.Math.Clamp(this.player.shield / Math.max(1, this.player.maxHealth), 0, 1);
@@ -449,7 +449,7 @@ export class MainScene extends Phaser.Scene {
         for (let index = 0; index < 6; index += 1) {
           const shard = this.add.circle(
             this.player.x + Phaser.Math.Between(-6, 6),
-            this.player.y - 30 + Phaser.Math.Between(-4, 4),
+            this.player.y - 46 + Phaser.Math.Between(-4, 4),
             Phaser.Math.Between(1, 2),
             0x9ce6ff,
             0.9
@@ -2250,7 +2250,7 @@ export class MainScene extends Phaser.Scene {
       return this.player.moveDirection.angle();
     }
 
-    return this.player.rotation ?? 0;
+    return this.player.facingAngle ?? this.player.rotation ?? 0;
   }
 
   createEarthspikeTelegraph(x, y, angle, width, length) {

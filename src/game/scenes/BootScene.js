@@ -37,6 +37,14 @@ import passiveProjectileCountIcon from '../../assets/passive_projectile_count.sv
 import passiveDamageBoostIcon from '../../assets/passive_damage_boost.svg';
 import passiveAttackFrequencyIcon from '../../assets/passive_attack_frequency.svg';
 import rewardMagnetImage from '../../assets/reward_magnet.png';
+import playerSouthImage from '../../assets/player/player1/player1_south.png';
+import playerSouthEastImage from '../../assets/player/player1/player1_south-east.png';
+import playerSouthWestImage from '../../assets/player/player1/player1_south-west.png';
+import playerNorthImage from '../../assets/player/player1/player1_north.png';
+import playerNorthEastImage from '../../assets/player/player1/player1_north-east.png';
+import playerNorthWestImage from '../../assets/player/player1/player1_north-west.png';
+import playerEastImage from '../../assets/player/player1/player1_east.png';
+import playerWestImage from '../../assets/player/player1/player1_west.png';
 import arcBoltCastAudioOgg from '../../assets/audio/arc_bolt_cast.ogg';
 import arcBoltCastAudioMp3 from '../../assets/audio/arc_bolt_cast.mp3';
 import arcBoltHitAudioOgg from '../../assets/audio/arc_bolt_hit.ogg';
@@ -111,7 +119,25 @@ export class BootScene extends Phaser.Scene {
     this.load.image('passive_pickup_radius', passivePickupRadiusIcon);
     this.load.image('passive_max_health', passiveMaxHealthIcon);
     this.load.image('reward_magnet', rewardMagnetImage);
-    this.load.audio('arc_bolt_cast_sfx', [arcBoltCastAudioOgg, arcBoltCastAudioMp3]);
+    this.load.image('player_south', playerSouthImage);
+    this.load.image('player_south_east', playerSouthEastImage);
+    this.load.image('player_south_west', playerSouthWestImage);
+    this.load.image('player_north', playerNorthImage);
+    this.load.image('player_north_east', playerNorthEastImage);
+    this.load.image('player_north_west', playerNorthWestImage);
+    this.load.image('player_east', playerEastImage);
+    this.load.image('player_west', playerWestImage);
+
+    Object.entries(playerWalkingFrameImages).forEach(([assetPath, image]) => {
+      const directionMatch = assetPath.match(/Walking[\\/](.+?)[\\/]frame_(\d+)\.png$/);
+      if (!directionMatch) {
+        return;
+      }
+
+      const directionKey = directionMatch[1].replace(/-/g, '_');
+      const frameIndex = Number(directionMatch[2]);
+      this.load.image(`player_walk_${directionKey}_${frameIndex}`, image);
+    });    this.load.audio('arc_bolt_cast_sfx', [arcBoltCastAudioOgg, arcBoltCastAudioMp3]);
     this.load.audio('arc_bolt_hit_sfx', [arcBoltHitAudioOgg, arcBoltHitAudioMp3]);
     this.load.audio('chain_thunder_cast_sfx', [chainThunderCastAudioOgg, chainThunderCastAudioMp3]);
     this.load.audio('comet_lance_cast_sfx', [cometLanceCastAudioOgg, cometLanceCastAudioMp3]);
@@ -137,13 +163,6 @@ export class BootScene extends Phaser.Scene {
 
   createTextures() {
     const graphics = this.make.graphics({ x: 0, y: 0, add: false });
-
-    graphics.clear();
-    graphics.fillStyle(0x7ef9ff, 1);
-    graphics.fillCircle(16, 16, 16);
-    graphics.lineStyle(3, 0xffffff, 0.85);
-    graphics.strokeCircle(16, 16, 16);
-    graphics.generateTexture('player', 32, 32);
 
     graphics.clear();
     graphics.fillStyle(0xff7b72, 1);
@@ -389,4 +408,3 @@ export class BootScene extends Phaser.Scene {
     graphics.generateTexture(key, 36, 36);
   }
 }
-
