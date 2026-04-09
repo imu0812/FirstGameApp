@@ -74,6 +74,15 @@ import vineTurretFireAudioOgg from '../../assets/audio/vine_turret_fire.ogg';
 import vineTurretFireAudioMp3 from '../../assets/audio/vine_turret_fire.mp3';
 import earthspikeLineCastAudioMp3 from '../../assets/audio/earthspike_line_cast.mp3';
 import earthspikeLineEruptSegmentAudioMp3 from '../../assets/audio/earthspike_line_erupt_segment.mp3';
+
+const playerWalkingFrameImages = import.meta.glob(
+  '../../assets/player/player1/animations/Walking/*/frame_*.png',
+  {
+    eager: true,
+    import: 'default'
+  }
+);
+
 export class BootScene extends Phaser.Scene {
   constructor() {
     super('BootScene');
@@ -137,7 +146,9 @@ export class BootScene extends Phaser.Scene {
       const directionKey = directionMatch[1].replace(/-/g, '_');
       const frameIndex = Number(directionMatch[2]);
       this.load.image(`player_walk_${directionKey}_${frameIndex}`, image);
-    });    this.load.audio('arc_bolt_cast_sfx', [arcBoltCastAudioOgg, arcBoltCastAudioMp3]);
+    });
+
+    this.load.audio('arc_bolt_cast_sfx', [arcBoltCastAudioOgg, arcBoltCastAudioMp3]);
     this.load.audio('arc_bolt_hit_sfx', [arcBoltHitAudioOgg, arcBoltHitAudioMp3]);
     this.load.audio('chain_thunder_cast_sfx', [chainThunderCastAudioOgg, chainThunderCastAudioMp3]);
     this.load.audio('comet_lance_cast_sfx', [cometLanceCastAudioOgg, cometLanceCastAudioMp3]);
