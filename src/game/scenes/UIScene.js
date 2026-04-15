@@ -192,6 +192,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   shutdown() {
+    this.optionButtons?.forEach((button) => this.stopPendingStarTween(button));
     this.scale.off('resize', this.handleResize, this);
     this.input.off('pointerdown', this.handlePointerDown, this);
     this.input.off('pointermove', this.handlePointerMove, this);
@@ -393,6 +394,13 @@ export class UIScene extends Phaser.Scene {
       stroke: '#47320c',
       strokeThickness: 2
     }).setOrigin(0, 0.5);
+    const pendingStar = this.add.text(-124, -18, '', {
+      fontFamily: 'Trebuchet MS',
+      fontSize: '11px',
+      color: '#f6d97a',
+      stroke: '#47320c',
+      strokeThickness: 2
+    }).setOrigin(0, 0.5).setVisible(false);
     const description = this.add.text(-124, -4, '', {
       fontFamily: 'Trebuchet MS',
       fontSize: '9px',
@@ -413,8 +421,61 @@ export class UIScene extends Phaser.Scene {
       mainScene.applyUpgrade(background.upgradeId);
     });
 
-    container.add([background, iconFrame, icon, title, starBackdrop, stars, description]);
-    return { container, background, iconFrame, icon, title, starBackdrop, stars, description };
+    container.add([background, iconFrame, icon, title, starBackdrop, stars, pendingStar, description]);
+    return { container, background, iconFrame, icon, title, starBackdrop, stars, pendingStar, pendingStarTween: null, description };
+  }
+
+  stopPendingStarTween(button) {
+    if (!button?.pendingStar) {
+      return;
+    }
+
+    if (button.pendingStarTween) {
+      button.pendingStarTween.remove();
+      button.pendingStarTween = null;
+    }
+
+    this.tweens.killTweensOf(button.pendingStar);
+    button.pendingStar.setVisible(false);
+    button.pendingStar.setAlpha(1);
+    button.pendingStar.setScale(1);
+  }
+
+  positionPendingStar(button, baseX, baseY, starCount, currentLevel) {
+    if (!button?.pendingStar || starCount <= 0) {
+      return;
+    }
+
+    const slotWidth = button.starBackdrop.width / starCount;
+    button.starBackdrop.setPosition(baseX, baseY);
+    button.stars.setPosition(baseX, baseY);
+    button.pendingStar.setPosition(baseX + slotWidth * currentLevel, baseY);
+  }
+
+  updateOptionStars(button, choice) {
+    const starCount = 5;
+    const nextLevel = Phaser.Math.Clamp(choice.nextLevel ?? 1, 1, starCount);
+    const currentLevel = Phaser.Math.Clamp(nextLevel - 1, 0, starCount);
+
+    this.stopPendingStarTween(button);
+    button.starBackdrop.setText(String.fromCharCode(0x2606).repeat(starCount));
+    button.stars.setText(String.fromCharCode(0x2605).repeat(currentLevel));
+
+    // Highlight only the star granted by this choice so prior levels stay steady.
+    if (nextLevel > currentLevel && nextLevel <= starCount) {
+      button.pendingStar.setText(String.fromCharCode(0x2605));
+      button.pendingStar.setVisible(true);
+      button.pendingStarTween = this.tweens.add({
+        targets: button.pendingStar,
+        alpha: 0.34,
+        scaleX: 1.08,
+        scaleY: 1.08,
+        duration: 650,
+        ease: 'Sine.InOut',
+        yoyo: true,
+        repeat: -1
+      });
+    }
   }
   createRefreshButton() {
     const background = this.add.rectangle(0, 0, 236, 52, 0x17402c, 1).setStrokeStyle(2, 0x8ff0af, 0.42).setInteractive({ useHandCursor: true });
@@ -607,6 +668,7 @@ export class UIScene extends Phaser.Scene {
 
     this.optionButtons.forEach((button, index) => {
       const choice = data.choices[index];
+      this.stopPendingStarTween(button);
 
       if (!choice) {
         button.background.upgradeId = null;
@@ -614,16 +676,14 @@ export class UIScene extends Phaser.Scene {
         button.iconFrame.setVisible(false);
         button.starBackdrop.setText('');
         button.stars.setText('');
+        button.pendingStar.setText('');
         button.container.setVisible(false);
         return;
       }
 
       button.background.upgradeId = choice.id;
       button.title.setText(choice.displayTitle ?? choice.title);
-      const filledStars = Math.max(0, Math.min(choice.nextLevel ?? 1, choice.maxLevel ?? 1));
-      const maxStars = Math.max(choice.maxLevel ?? filledStars, filledStars);
-      button.starBackdrop.setText(String.fromCharCode(0x2606).repeat(maxStars));
-      button.stars.setText(String.fromCharCode(0x2605).repeat(filledStars));
+      this.updateOptionStars(button, choice);
       button.description.setText(choice.description);
 
       if (choice.iconKey && this.textures.exists(choice.iconKey)) {
@@ -632,8 +692,7 @@ export class UIScene extends Phaser.Scene {
         button.icon.setVisible(true);
         button.iconFrame.setVisible(true);
         button.title.setPosition(-72, -34);
-        button.starBackdrop.setPosition(-72, -18);
-        button.stars.setPosition(-72, -18);
+        this.positionPendingStar(button, -72, -18, 5, Math.max(0, (choice.nextLevel ?? 1) - 1));
         button.description.setPosition(-72, -4);
         button.description.setFontSize(8);
         button.description.setLineSpacing(1);
@@ -643,8 +702,7 @@ export class UIScene extends Phaser.Scene {
         button.icon.setVisible(false);
         button.iconFrame.setVisible(false);
         button.title.setPosition(-126, -34);
-        button.starBackdrop.setPosition(-126, -18);
-        button.stars.setPosition(-126, -18);
+        this.positionPendingStar(button, -126, -18, 5, Math.max(0, (choice.nextLevel ?? 1) - 1));
         button.description.setPosition(-126, -4);
         button.description.setFontSize(9);
         button.description.setLineSpacing(1);
@@ -662,11 +720,13 @@ export class UIScene extends Phaser.Scene {
     this.refreshButton.setVisible(false);
 
     this.optionButtons.forEach((button) => {
+      this.stopPendingStarTween(button);
       button.background.upgradeId = null;
       button.icon.setVisible(false);
       button.iconFrame.setVisible(false);
       button.starBackdrop.setText('');
       button.stars.setText('');
+      button.pendingStar.setText('');
       button.container.setVisible(false);
     });
   }
@@ -725,6 +785,5 @@ export class UIScene extends Phaser.Scene {
     });
   }
 }
-
 
 
