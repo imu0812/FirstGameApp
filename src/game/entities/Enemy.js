@@ -1,8 +1,23 @@
 import Phaser from 'phaser';
 
+const ENEMY_DIRECTIONS = [
+  'east',
+  'south_east',
+  'south',
+  'south_west',
+  'west',
+  'north_west',
+  'north',
+  'north_east'
+];
+
+function getEnemyBaseTexture(config) {
+  return config?.visual?.texturePrefix ? `${config.visual.texturePrefix}_south` : config?.isRanged ? 'elite_ranger' : 'enemy';
+}
+
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y, config) {
-    super(scene, x, y, config?.isRanged ? 'elite_ranger' : 'enemy');
+    super(scene, x, y, getEnemyBaseTexture(config));
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
@@ -82,15 +97,24 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.nextShotAt = this.scene.time.now + Phaser.Math.Between(this.initialShotDelayMin, this.initialShotDelayMax);
     this.windupUntil = 0;
     this.windupFlash = false;
+    this.visualConfig = config.visual ?? null;
+    this.facingDirection = 'south';
+    this.walkFrameIndex = 0;
+    this.walkFrameElapsed = 0;
 
     this.enableBody(true, x, y, true, true);
     this.setActive(true);
     this.setVisible(true);
     this.setPosition(x, y);
     this.setVelocity(0, 0);
-    this.setTexture(this.isRanged ? 'elite_ranger' : 'enemy');
-    this.setTint(this.baseTint);
+    this.setTexture(getEnemyBaseTexture(config));
+    this.walkFrameIndex = 0;
+    this.walkFrameElapsed = 0;
+    this.applyEnemyTint(this.baseTint);
     this.setScale(config.scale ?? 1);
+    if (this.visualConfig?.displaySize) {
+      this.setDisplaySize(this.visualConfig.displaySize * (config.scale ?? 1), this.visualConfig.displaySize * (config.scale ?? 1));
+    }
     this.updateHitbox();
 
     this.freezeOutline.setPosition(x, y);
@@ -134,6 +158,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       this.setVelocity(0, 0);
       this.setTint(0xbfe8ff);
       this.freezeOutline.setVisible(true);
+      this.updateMovementTexture(0);
       return;
     }
 
@@ -160,6 +185,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     if (time < this.rootUntil) {
       this.setVelocity(0, 0);
+      this.updateMovementTexture(0);
       return;
     }
 
@@ -169,7 +195,74 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     this.scene.physics.moveToObject(this, player, this.moveSpeed * this.slowMultiplier);
+    if (this.visualConfig) {
+      this.updateMovementTexture(this.scene.game.loop.delta);
+      return;
+    }
+
     this.rotation = Phaser.Math.Angle.Between(this.x, this.y, player.x, player.y);
+  }
+
+  updateMovementTexture(delta) {
+    if (!this.visualConfig) {
+      return;
+    }
+
+    this.updateFacingDirectionFromVelocity();
+
+    const isMoving = this.body && this.body.velocity.lengthSq() > 0.0001;
+    if (!isMoving) {
+      this.walkFrameIndex = 0;
+      this.walkFrameElapsed = 0;
+      this.applyCurrentTexture(false);
+      return;
+    }
+
+    this.walkFrameElapsed += delta;
+    const frameDuration = this.visualConfig.walkFrameDuration ?? 90;
+    const frameCount = this.visualConfig.walkFrameCount ?? 1;
+
+    while (this.walkFrameElapsed >= frameDuration) {
+      this.walkFrameElapsed -= frameDuration;
+      this.walkFrameIndex = (this.walkFrameIndex + 1) % frameCount;
+    }
+
+    this.applyCurrentTexture(true);
+  }
+
+  updateFacingDirectionFromVelocity() {
+    if (!this.body || this.body.velocity.lengthSq() <= 0.0001) {
+      return;
+    }
+
+    const angle = Phaser.Math.Angle.Between(0, 0, this.body.velocity.x, this.body.velocity.y);
+    const wrappedAngle = (angle + Math.PI * 2) % (Math.PI * 2);
+    const directionIndex = Math.round(wrappedAngle / (Math.PI / 4)) % ENEMY_DIRECTIONS.length;
+    this.facingDirection = ENEMY_DIRECTIONS[directionIndex];
+  }
+
+  applyCurrentTexture(isMoving) {
+    const texturePrefix = isMoving && this.visualConfig.walkTexturePrefix
+      ? this.visualConfig.walkTexturePrefix
+      : this.visualConfig.texturePrefix;
+    const nextTexture = isMoving
+      ? `${texturePrefix}_${this.facingDirection}_${this.walkFrameIndex}`
+      : `${texturePrefix}_${this.facingDirection}`;
+
+    if (this.texture.key !== nextTexture) {
+      this.setTexture(nextTexture);
+      this.setRotation(0);
+      this.updateHitbox();
+    }
+  }
+
+  applyEnemyTint(tint) {
+    if (this.visualConfig?.useTint === false) {
+      this.clearTint();
+      return;
+    }
+
+    this.setTint(tint);
   }
 
   refreshStatusTint(time = this.scene.time.now) {
@@ -193,7 +286,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       return;
     }
 
-    this.setTint(this.baseTint);
+    this.applyEnemyTint(this.baseTint);
   }
 
   updateStatusVisuals(time = this.scene.time.now) {

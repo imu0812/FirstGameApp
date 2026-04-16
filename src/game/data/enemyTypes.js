@@ -9,7 +9,15 @@ export const ENEMY_TYPES = {
     tint: 0xff7b72,
     scale: 1,
     healthClass: 'normal',
-    bodyRadiusFactor: 0.44
+    bodyRadiusFactor: 0.44,
+    visual: {
+      texturePrefix: 'slime',
+      walkTexturePrefix: 'slime_walk',
+      walkFrameCount: 8,
+      walkFrameDuration: 90,
+      displaySize: 28,
+      useTint: false
+    }
   },
   fast: {
     key: 'fast',

@@ -83,6 +83,19 @@ const playerWalkingFrameImages = import.meta.glob(
   }
 );
 
+const slimeDirectionImages = import.meta.glob('../../assets/enemy/normal/Slime/*.png', {
+  eager: true,
+  import: 'default'
+});
+
+const slimeWalkingFrameImages = import.meta.glob(
+  '../../assets/enemy/normal/Slime/animation/*/frame_*.png',
+  {
+    eager: true,
+    import: 'default'
+  }
+);
+
 export class BootScene extends Phaser.Scene {
   constructor() {
     super('BootScene');
@@ -146,6 +159,27 @@ export class BootScene extends Phaser.Scene {
       const directionKey = directionMatch[1].replace(/-/g, '_');
       const frameIndex = Number(directionMatch[2]);
       this.load.image(`player_walk_${directionKey}_${frameIndex}`, image);
+    });
+
+    Object.entries(slimeDirectionImages).forEach(([assetPath, image]) => {
+      const directionMatch = assetPath.match(/Slime[\\/](.+?)\.png$/);
+      if (!directionMatch) {
+        return;
+      }
+
+      const directionKey = directionMatch[1].replace(/-/g, '_');
+      this.load.image(`slime_${directionKey}`, image);
+    });
+
+    Object.entries(slimeWalkingFrameImages).forEach(([assetPath, image]) => {
+      const directionMatch = assetPath.match(/animation[\\/](.+?)[\\/]frame_(\d+)\.png$/);
+      if (!directionMatch) {
+        return;
+      }
+
+      const directionKey = directionMatch[1].replace(/-/g, '_');
+      const frameIndex = Number(directionMatch[2]);
+      this.load.image(`slime_walk_${directionKey}_${frameIndex}`, image);
     });
 
     this.load.audio('arc_bolt_cast_sfx', [arcBoltCastAudioOgg, arcBoltCastAudioMp3]);
