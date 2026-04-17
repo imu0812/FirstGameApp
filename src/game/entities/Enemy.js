@@ -530,6 +530,27 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     return this.health <= 0;
   }
 
+  playDeathEffect() {
+    const deathTexture = this.visualConfig?.deathTexture;
+    if (!deathTexture || !this.scene.textures.exists(deathTexture)) {
+      return;
+    }
+
+    const deathImage = this.scene.add.image(this.x, this.y, deathTexture);
+    deathImage.setDepth(this.depth);
+    deathImage.setAlpha(0.92);
+    deathImage.setRotation(0);
+    deathImage.setDisplaySize(this.displayWidth, this.displayHeight);
+
+    this.scene.tweens.add({
+      targets: deathImage,
+      alpha: 0,
+      duration: this.visualConfig.deathFadeDuration ?? 700,
+      ease: 'Quad.easeOut',
+      onComplete: () => deathImage.destroy()
+    });
+  }
+
   deactivate() {
     this.disableBody(true, true);
     this.setVelocity(0, 0);

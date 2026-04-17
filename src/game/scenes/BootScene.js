@@ -96,6 +96,17 @@ const slimeWalkingFrameImages = import.meta.glob(
   }
 );
 
+const SLIME_DIRECTION_NAMES = new Set([
+  'east',
+  'north-east',
+  'north-west',
+  'north',
+  'south-east',
+  'south-west',
+  'south',
+  'west'
+]);
+
 export class BootScene extends Phaser.Scene {
   constructor() {
     super('BootScene');
@@ -167,7 +178,17 @@ export class BootScene extends Phaser.Scene {
         return;
       }
 
-      const directionKey = directionMatch[1].replace(/-/g, '_');
+      const rawDirection = directionMatch[1];
+      if (rawDirection === 'slime_dead') {
+        this.load.image('slime_dead', image);
+        return;
+      }
+
+      if (!SLIME_DIRECTION_NAMES.has(rawDirection)) {
+        return;
+      }
+
+      const directionKey = rawDirection.replace(/-/g, '_');
       this.load.image(`slime_${directionKey}`, image);
     });
 

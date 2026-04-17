@@ -3275,7 +3275,22 @@ export class MainScene extends Phaser.Scene {
     return true;
     }
 
-    this.spawnExperienceGem(enemy.x, enemy.y, enemy.experienceValue);
+    enemy.playDeathEffect?.();
+
+    let gemX = enemy.x;
+    if (enemy.visualConfig?.deathTexture) {
+      const dropOffset = Math.max(18, enemy.displayWidth * 0.72);
+      const minDropX = -this.worldSize.width * 0.48;
+      const maxDropX = this.worldSize.width * 0.48;
+      const dropDirection = enemy.x >= this.player.x ? 1 : -1;
+
+      gemX = Phaser.Math.Clamp(enemy.x + dropOffset * dropDirection, minDropX, maxDropX);
+      if (Math.abs(gemX - enemy.x) < dropOffset * 0.4) {
+        gemX = Phaser.Math.Clamp(enemy.x - dropOffset * dropDirection, minDropX, maxDropX);
+      }
+    }
+
+    this.spawnExperienceGem(gemX, enemy.y, enemy.experienceValue);
     enemy.deactivate();
     this.kills += 1;
     return true;
@@ -4511,7 +4526,6 @@ export class MainScene extends Phaser.Scene {
     });
   }
 }
-
 
 
 

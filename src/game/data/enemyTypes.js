@@ -16,6 +16,8 @@ export const ENEMY_TYPES = {
       walkFrameCount: 8,
       walkFrameDuration: 90,
       displaySize: 28,
+      deathTexture: 'slime_dead',
+      deathFadeDuration: 1700,
       useTint: false
     }
   },
