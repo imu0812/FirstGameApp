@@ -21,6 +21,42 @@ import { CHEST_SPAWN_CONFIG, CHEST_TYPES, REWARD_TYPES, getChestSpawnCap, getChe
 import { TestModeController } from '../debug/TestModeController.js';
 import { isTestModeEnabled } from '../debug/testModeConfig.js';
 
+const BACKGROUND_THEMES = {
+  night: {
+    baseColor: 0x173247,
+    secondaryColor: 0x10283a,
+    gridColor: 0xb4dcff,
+    gridAlpha: 0.028,
+    ambientColor: 0xa7d7e7,
+    ambientAlpha: 0.075,
+    ambientCount: 9,
+    pattern: 'grid'
+  },
+  forest: {
+    baseColor: 0x213a31,
+    secondaryColor: 0x182d26,
+    gridColor: 0xb4ffd2,
+    gridAlpha: 0.026,
+    ambientColor: 0xa8d8b7,
+    ambientAlpha: 0.07,
+    ambientCount: 10,
+    pattern: 'forest'
+  },
+  dungeon: {
+    baseColor: 0x303844,
+    secondaryColor: 0x252d37,
+    gridColor: 0xffffff,
+    gridAlpha: 0.03,
+    ambientColor: 0xb6c5d4,
+    ambientAlpha: 0.06,
+    ambientCount: 7,
+    pattern: 'dungeon'
+  }
+};
+
+const DEFAULT_BACKGROUND_THEME = 'dungeon';
+const BACKGROUND_THEME_TEXTURE_VERSION = 'bright_v1';
+
 const WEAPON_ROLE_SUMMARIES = {
   arc_bolt: { functionText: '定位:自瞄單體', suitability: '適性:新手/追擊/Boss' },
   halo_disc: { functionText: '定位:近身環刃', suitability: '適性:貼身/風箏/自保' },
@@ -476,53 +512,122 @@ export class MainScene extends Phaser.Scene {
 
 
   createArena() {
-    if (!this.textures.exists('arena_floor_tile')) {
-      const floorGraphics = this.make.graphics({ x: 0, y: 0, add: false });
-      floorGraphics.fillStyle(0x0b1b29, 1);
-      floorGraphics.fillRect(0, 0, 160, 160);
-      floorGraphics.lineStyle(1, 0x16384f, 0.65);
-
-      for (let offset = 0; offset <= 160; offset += 80) {
-        floorGraphics.lineBetween(offset, 0, offset, 160);
-        floorGraphics.lineBetween(0, offset, 160, offset);
-      }
-
-      floorGraphics.generateTexture('arena_floor_tile', 160, 160);
-      floorGraphics.destroy();
-    }
-
-    if (!this.textures.exists('arena_star_tile')) {
-      const starGraphics = this.make.graphics({ x: 0, y: 0, add: false });
-      starGraphics.fillStyle(0x000000, 0);
-      starGraphics.fillRect(0, 0, 320, 320);
-      starGraphics.fillStyle(0x12324a, 0.8);
-
-      for (let i = 0; i < 14; i += 1) {
-        const starX = Phaser.Math.Between(18, 302);
-        const starY = Phaser.Math.Between(18, 302);
-        const radius = Phaser.Math.Between(2, 5);
-        starGraphics.fillCircle(starX, starY, radius);
-      }
-
-      starGraphics.generateTexture('arena_star_tile', 320, 320);
-      starGraphics.destroy();
-    }
-
+    const initialTheme = DEFAULT_BACKGROUND_THEME;
+    const textureKeys = this.ensureBackgroundThemeTextures(initialTheme);
     const { width, height } = this.scale.gameSize;
-    this.arenaBackground = this.add.tileSprite(0, 0, width, height, 'arena_floor_tile');
+    this.arenaBackground = this.add.tileSprite(0, 0, width, height, textureKeys.floor);
     this.arenaBackground.setOrigin(0);
     this.arenaBackground.setScrollFactor(0);
     this.arenaBackground.setDepth(-20);
 
-    this.arenaStars = this.add.tileSprite(0, 0, width, height, 'arena_star_tile');
+    this.arenaStars = this.add.tileSprite(0, 0, width, height, textureKeys.ambient);
     this.arenaStars.setOrigin(0);
     this.arenaStars.setScrollFactor(0);
     this.arenaStars.setDepth(-19);
-    this.arenaStars.setAlpha(0.95);
+    this.arenaStars.setAlpha(1);
+    this.backgroundThemeKey = initialTheme;
 
     this.scale.on('resize', this.handleResize, this);
     this.handleResize(this.scale.gameSize);
     this.updateArenaBackground();
+  }
+
+  setBackgroundTheme(themeKey = 'night') {
+    const nextThemeKey = BACKGROUND_THEMES[themeKey] ? themeKey : 'night';
+    const textureKeys = this.ensureBackgroundThemeTextures(nextThemeKey);
+    this.backgroundThemeKey = nextThemeKey;
+
+    if (this.arenaBackground) {
+      this.arenaBackground.setTexture(textureKeys.floor);
+    }
+
+    if (this.arenaStars) {
+      this.arenaStars.setTexture(textureKeys.ambient);
+    }
+
+    this.updateArenaBackground();
+  }
+
+  ensureBackgroundThemeTextures(themeKey) {
+    const textureKeys = this.getBackgroundTextureKeys(themeKey);
+    if (this.textures.exists(textureKeys.floor) && this.textures.exists(textureKeys.ambient)) {
+      return textureKeys;
+    }
+
+    const theme = BACKGROUND_THEMES[themeKey] ?? BACKGROUND_THEMES.night;
+    this.createBackgroundFloorTexture(textureKeys.floor, theme);
+    this.createBackgroundAmbientTexture(textureKeys.ambient, theme);
+    return textureKeys;
+  }
+
+  getBackgroundTextureKeys(themeKey) {
+    return {
+      floor: `arena_floor_tile_${themeKey}_${BACKGROUND_THEME_TEXTURE_VERSION}`,
+      ambient: `arena_ambient_tile_${themeKey}_${BACKGROUND_THEME_TEXTURE_VERSION}`
+    };
+  }
+
+  createBackgroundFloorTexture(textureKey, theme) {
+    const tileSize = 160;
+    const halfTile = tileSize / 2;
+    const graphics = this.make.graphics({ x: 0, y: 0, add: false });
+
+    graphics.fillStyle(theme.baseColor, 1);
+    graphics.fillRect(0, 0, tileSize, tileSize);
+    graphics.fillStyle(theme.secondaryColor, 0.28);
+    graphics.fillRect(0, 0, tileSize, halfTile);
+    graphics.fillStyle(theme.secondaryColor, 0.14);
+    graphics.fillRect(0, halfTile, tileSize, halfTile);
+    graphics.lineStyle(1, theme.gridColor, theme.gridAlpha);
+
+    if (theme.pattern === 'dungeon') {
+      for (let y = 0; y <= tileSize; y += 40) {
+        graphics.lineBetween(0, y, tileSize, y);
+      }
+
+      for (let y = 0; y < tileSize; y += 40) {
+        const xOffset = y % 80 === 0 ? 0 : 40;
+        for (let x = xOffset; x <= tileSize; x += 80) {
+          graphics.lineBetween(x, y, x, y + 40);
+        }
+      }
+    } else {
+      for (let offset = 0; offset <= tileSize; offset += halfTile) {
+        graphics.lineBetween(offset, 0, offset, tileSize);
+        graphics.lineBetween(0, offset, tileSize, offset);
+      }
+    }
+
+    if (theme.pattern === 'forest') {
+      graphics.lineStyle(1, theme.gridColor, theme.gridAlpha * 0.55);
+      for (let i = 0; i < 8; i += 1) {
+        const x = Phaser.Math.Between(12, tileSize - 12);
+        const y = Phaser.Math.Between(12, tileSize - 12);
+        graphics.lineBetween(x, y, x + Phaser.Math.Between(-10, 10), y + Phaser.Math.Between(6, 14));
+      }
+    }
+
+    graphics.generateTexture(textureKey, tileSize, tileSize);
+    graphics.destroy();
+  }
+
+  createBackgroundAmbientTexture(textureKey, theme) {
+    const tileSize = 320;
+    const graphics = this.make.graphics({ x: 0, y: 0, add: false });
+
+    graphics.fillStyle(0x000000, 0);
+    graphics.fillRect(0, 0, tileSize, tileSize);
+    graphics.fillStyle(theme.ambientColor, theme.ambientAlpha);
+
+    for (let i = 0; i < theme.ambientCount; i += 1) {
+      const x = Phaser.Math.Between(18, tileSize - 18);
+      const y = Phaser.Math.Between(18, tileSize - 18);
+      const radius = Phaser.Math.Between(1, theme.pattern === 'dungeon' ? 3 : 4);
+      graphics.fillCircle(x, y, radius);
+    }
+
+    graphics.generateTexture(textureKey, tileSize, tileSize);
+    graphics.destroy();
   }
 
   handleResize(gameSize) {
@@ -4526,11 +4631,6 @@ export class MainScene extends Phaser.Scene {
     });
   }
 }
-
-
-
-
-
 
 
 

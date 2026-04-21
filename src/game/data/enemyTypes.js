@@ -37,7 +37,7 @@ export const ENEMY_TYPES = {
       walkTexturePrefix: 'bat_walk',
       walkFrameCount: 6,
       walkFrameDuration: 80,
-      displaySize: 28,
+      displaySize: 42,
       deathTexture: 'bat_dead',
       deathFadeDuration: 1200,
       useTint: false
