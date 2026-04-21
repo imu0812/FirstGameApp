@@ -96,7 +96,20 @@ const slimeWalkingFrameImages = import.meta.glob(
   }
 );
 
-const SLIME_DIRECTION_NAMES = new Set([
+const batDirectionImages = import.meta.glob('../../assets/enemy/fast/Bat/*.png', {
+  eager: true,
+  import: 'default'
+});
+
+const batWalkingFrameImages = import.meta.glob(
+  '../../assets/enemy/fast/Bat/animations/*/frame_*.png',
+  {
+    eager: true,
+    import: 'default'
+  }
+);
+
+const ENEMY_DIRECTION_ASSET_NAMES = new Set([
   'east',
   'north-east',
   'north-west',
@@ -184,7 +197,7 @@ export class BootScene extends Phaser.Scene {
         return;
       }
 
-      if (!SLIME_DIRECTION_NAMES.has(rawDirection)) {
+      if (!ENEMY_DIRECTION_ASSET_NAMES.has(rawDirection)) {
         return;
       }
 
@@ -201,6 +214,37 @@ export class BootScene extends Phaser.Scene {
       const directionKey = directionMatch[1].replace(/-/g, '_');
       const frameIndex = Number(directionMatch[2]);
       this.load.image(`slime_walk_${directionKey}_${frameIndex}`, image);
+    });
+
+    Object.entries(batDirectionImages).forEach(([assetPath, image]) => {
+      const directionMatch = assetPath.match(/Bat[\\/](.+?)\.png$/);
+      if (!directionMatch) {
+        return;
+      }
+
+      const rawDirection = directionMatch[1];
+      if (rawDirection === 'bat_dead') {
+        this.load.image('bat_dead', image);
+        return;
+      }
+
+      if (!ENEMY_DIRECTION_ASSET_NAMES.has(rawDirection)) {
+        return;
+      }
+
+      const directionKey = rawDirection.replace(/-/g, '_');
+      this.load.image(`bat_${directionKey}`, image);
+    });
+
+    Object.entries(batWalkingFrameImages).forEach(([assetPath, image]) => {
+      const directionMatch = assetPath.match(/animations[\\/](.+?)[\\/]frame_(\d+)\.png$/);
+      if (!directionMatch) {
+        return;
+      }
+
+      const directionKey = directionMatch[1].replace(/-/g, '_');
+      const frameIndex = Number(directionMatch[2]);
+      this.load.image(`bat_walk_${directionKey}_${frameIndex}`, image);
     });
 
     this.load.audio('arc_bolt_cast_sfx', [arcBoltCastAudioOgg, arcBoltCastAudioMp3]);

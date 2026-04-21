@@ -31,7 +31,17 @@ export const ENEMY_TYPES = {
     tint: 0xffd166,
     scale: 0.82,
     healthClass: 'normal',
-    bodyRadiusFactor: 0.42
+    bodyRadiusFactor: 0.42,
+    visual: {
+      texturePrefix: 'bat',
+      walkTexturePrefix: 'bat_walk',
+      walkFrameCount: 6,
+      walkFrameDuration: 80,
+      displaySize: 28,
+      deathTexture: 'bat_dead',
+      deathFadeDuration: 1200,
+      useTint: false
+    }
   },
   tank: {
     key: 'tank',
