@@ -109,6 +109,19 @@ const batWalkingFrameImages = import.meta.glob(
   }
 );
 
+const goblinDirectionImages = import.meta.glob('../../assets/enemy/tank/Goblin/*.png', {
+  eager: true,
+  import: 'default'
+});
+
+const goblinWalkingFrameImages = import.meta.glob(
+  '../../assets/enemy/tank/Goblin/animations/*/frame_*.png',
+  {
+    eager: true,
+    import: 'default'
+  }
+);
+
 const ENEMY_DIRECTION_ASSET_NAMES = new Set([
   'east',
   'north-east',
@@ -245,6 +258,37 @@ export class BootScene extends Phaser.Scene {
       const directionKey = directionMatch[1].replace(/-/g, '_');
       const frameIndex = Number(directionMatch[2]);
       this.load.image(`bat_walk_${directionKey}_${frameIndex}`, image);
+    });
+
+    Object.entries(goblinDirectionImages).forEach(([assetPath, image]) => {
+      const directionMatch = assetPath.match(/Goblin[\\/](.+?)\.png$/);
+      if (!directionMatch) {
+        return;
+      }
+
+      const rawDirection = directionMatch[1];
+      if (rawDirection === 'goblin_dead') {
+        this.load.image('goblin_dead', image);
+        return;
+      }
+
+      if (!ENEMY_DIRECTION_ASSET_NAMES.has(rawDirection)) {
+        return;
+      }
+
+      const directionKey = rawDirection.replace(/-/g, '_');
+      this.load.image(`goblin_${directionKey}`, image);
+    });
+
+    Object.entries(goblinWalkingFrameImages).forEach(([assetPath, image]) => {
+      const directionMatch = assetPath.match(/animations[\\/](.+?)[\\/]frame_(\d+)\.png$/);
+      if (!directionMatch) {
+        return;
+      }
+
+      const directionKey = directionMatch[1].replace(/-/g, '_');
+      const frameIndex = Number(directionMatch[2]);
+      this.load.image(`goblin_walk_${directionKey}_${frameIndex}`, image);
     });
 
     this.load.audio('arc_bolt_cast_sfx', [arcBoltCastAudioOgg, arcBoltCastAudioMp3]);

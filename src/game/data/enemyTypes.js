@@ -53,7 +53,17 @@ export const ENEMY_TYPES = {
     tint: 0xa78bfa,
     scale: 1.28,
     healthClass: 'normal',
-    bodyRadiusFactor: 0.46
+    bodyRadiusFactor: 0.46,
+    visual: {
+      texturePrefix: 'goblin',
+      walkTexturePrefix: 'goblin_walk',
+      walkFrameCount: 7,
+      walkFrameDuration: 100,
+      displaySize: 44,
+      deathTexture: 'goblin_dead',
+      deathFadeDuration: 1500,
+      useTint: false
+    }
   },
   elite_ranger: {
     key: 'elite_ranger',
