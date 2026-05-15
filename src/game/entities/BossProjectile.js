@@ -31,6 +31,7 @@ export class BossProjectile extends Phaser.Physics.Arcade.Sprite {
     this.setVisible(true);
     this.setPosition(config.x, config.y);
     this.setVelocity(0, 0);
+    this.setTexture(config.texture ?? 'boss_bullet');
     this.setTint(config.tint ?? 0x9ae5ff);
     this.setScale(config.scale ?? 1);
     this.body.setCircle(config.bodyRadius ?? 7);

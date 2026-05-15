@@ -1346,7 +1346,8 @@ export class MainScene extends Phaser.Scene {
       target: this.player,
       tint: enemy.projectileTint,
       scale: enemy.projectileScale,
-      bodyRadius: enemy.projectileBodyRadius
+      bodyRadius: enemy.projectileBodyRadius,
+      texture: enemy.projectileTexture
     });
   }
   createShockwaveChargeEffect(x, y, radius, duration = 600) {
@@ -4631,7 +4632,6 @@ export class MainScene extends Phaser.Scene {
     });
   }
 }
-
 
 
 

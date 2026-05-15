@@ -122,6 +122,27 @@ const goblinWalkingFrameImages = import.meta.glob(
   }
 );
 
+const elfDirectionImages = import.meta.glob('../../assets/enemy/elite_ranger/elf/*.png', {
+  eager: true,
+  import: 'default'
+});
+
+const elfWalkingFrameImages = import.meta.glob(
+  '../../assets/enemy/elite_ranger/elf/animations/Walking/*/frame_*.png',
+  {
+    eager: true,
+    import: 'default'
+  }
+);
+
+const elfShootingFrameImages = import.meta.glob(
+  '../../assets/enemy/elite_ranger/elf/animations/Shooting/*/frame_*.png',
+  {
+    eager: true,
+    import: 'default'
+  }
+);
+
 const ENEMY_DIRECTION_ASSET_NAMES = new Set([
   'east',
   'north-east',
@@ -291,6 +312,48 @@ export class BootScene extends Phaser.Scene {
       this.load.image(`goblin_walk_${directionKey}_${frameIndex}`, image);
     });
 
+    Object.entries(elfDirectionImages).forEach(([assetPath, image]) => {
+      const directionMatch = assetPath.match(/elf[\\/](.+?)\.png$/);
+      if (!directionMatch) {
+        return;
+      }
+
+      const rawDirection = directionMatch[1];
+      if (rawDirection === 'elf_dead') {
+        this.load.image('elf_dead', image);
+        return;
+      }
+
+      if (!ENEMY_DIRECTION_ASSET_NAMES.has(rawDirection)) {
+        return;
+      }
+
+      const directionKey = rawDirection.replace(/-/g, '_');
+      this.load.image(`elf_${directionKey}`, image);
+    });
+
+    Object.entries(elfWalkingFrameImages).forEach(([assetPath, image]) => {
+      const directionMatch = assetPath.match(/Walking[\\/](.+?)[\\/]frame_(\d+)\.png$/);
+      if (!directionMatch) {
+        return;
+      }
+
+      const directionKey = directionMatch[1].replace(/-/g, '_');
+      const frameIndex = Number(directionMatch[2]);
+      this.load.image(`elf_walk_${directionKey}_${frameIndex}`, image);
+    });
+
+    Object.entries(elfShootingFrameImages).forEach(([assetPath, image]) => {
+      const directionMatch = assetPath.match(/Shooting[\\/](.+?)[\\/]frame_(\d+)\.png$/);
+      if (!directionMatch) {
+        return;
+      }
+
+      const directionKey = directionMatch[1].replace(/-/g, '_');
+      const frameIndex = Number(directionMatch[2]);
+      this.load.image(`elf_shoot_${directionKey}_${frameIndex}`, image);
+    });
+
     this.load.audio('arc_bolt_cast_sfx', [arcBoltCastAudioOgg, arcBoltCastAudioMp3]);
     this.load.audio('arc_bolt_hit_sfx', [arcBoltHitAudioOgg, arcBoltHitAudioMp3]);
     this.load.audio('chain_thunder_cast_sfx', [chainThunderCastAudioOgg, chainThunderCastAudioMp3]);
@@ -354,6 +417,33 @@ export class BootScene extends Phaser.Scene {
     graphics.lineStyle(2, 0xeefbff, 0.9);
     graphics.strokeCircle(7, 7, 7);
     graphics.generateTexture('boss_bullet', 14, 14);
+
+    graphics.clear();
+    graphics.fillStyle(0xd8b177, 1);
+    graphics.fillRect(3, 8, 24, 3);
+    graphics.fillStyle(0xf6efe0, 1);
+    graphics.beginPath();
+    graphics.moveTo(27, 4);
+    graphics.lineTo(36, 9.5);
+    graphics.lineTo(27, 15);
+    graphics.closePath();
+    graphics.fillPath();
+    graphics.fillStyle(0x7fcf9b, 1);
+    graphics.beginPath();
+    graphics.moveTo(3, 8);
+    graphics.lineTo(0, 3);
+    graphics.lineTo(9, 8);
+    graphics.closePath();
+    graphics.fillPath();
+    graphics.beginPath();
+    graphics.moveTo(3, 11);
+    graphics.lineTo(0, 16);
+    graphics.lineTo(9, 11);
+    graphics.closePath();
+    graphics.fillPath();
+    graphics.lineStyle(1, 0x6f4a2a, 0.9);
+    graphics.strokeLineShape(new Phaser.Geom.Line(3, 9.5, 29, 9.5));
+    graphics.generateTexture('elite_arrow', 38, 20);
 
     graphics.clear();
     graphics.fillStyle(0x75f2b7, 1);

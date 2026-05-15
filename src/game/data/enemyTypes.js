@@ -85,12 +85,26 @@ export const ENEMY_TYPES = {
     projectileLifeSpan: 2300,
     projectileDamage: 1,
     projectileBodyRadius: 6,
-    projectileTint: 0xffb16f,
+    projectileTint: 0xffffff,
     projectileScale: 0.95,
+    projectileTexture: 'elite_arrow',
     projectileCooldown: 1950,
     telegraphDuration: 500,
     initialShotDelayMin: 850,
-    initialShotDelayMax: 1650
+    initialShotDelayMax: 1650,
+    visual: {
+      texturePrefix: 'elf',
+      walkTexturePrefix: 'elf_walk',
+      attackTexturePrefix: 'elf_shoot',
+      walkFrameCount: 8,
+      walkFrameDuration: 90,
+      attackFrameCount: 3,
+      attackFrameDuration: 120,
+      displaySize: 48,
+      deathTexture: 'elf_dead',
+      deathFadeDuration: 1500,
+      useTint: false
+    }
   }
 };
 

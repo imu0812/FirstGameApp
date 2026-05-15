@@ -90,6 +90,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.projectileBodyRadius = config.projectileBodyRadius ?? 6;
     this.projectileTint = config.projectileTint ?? 0xffffff;
     this.projectileScale = config.projectileScale ?? 1;
+    this.projectileTexture = config.projectileTexture ?? 'boss_bullet';
     this.projectileCooldown = config.projectileCooldown ?? 0;
     this.telegraphDuration = config.telegraphDuration ?? 0;
     this.initialShotDelayMin = config.initialShotDelayMin ?? 800;
@@ -101,6 +102,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.facingDirection = 'south';
     this.walkFrameIndex = 0;
     this.walkFrameElapsed = 0;
+    this.attackFrameIndex = 0;
+    this.attackFrameElapsed = 0;
 
     this.enableBody(true, x, y, true, true);
     this.setActive(true);
@@ -110,6 +113,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.setTexture(getEnemyBaseTexture(config));
     this.walkFrameIndex = 0;
     this.walkFrameElapsed = 0;
+    this.attackFrameIndex = 0;
+    this.attackFrameElapsed = 0;
     this.applyEnemyTint(this.baseTint);
     this.setScale(config.scale ?? 1);
     if (this.visualConfig?.displaySize) {
@@ -236,6 +241,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     const angle = Phaser.Math.Angle.Between(0, 0, this.body.velocity.x, this.body.velocity.y);
+    this.updateFacingDirectionFromAngle(angle);
+  }
+
+  updateFacingDirectionFromAngle(angle) {
     const wrappedAngle = (angle + Math.PI * 2) % (Math.PI * 2);
     const directionIndex = Math.round(wrappedAngle / (Math.PI / 4)) % ENEMY_DIRECTIONS.length;
     this.facingDirection = ENEMY_DIRECTIONS[directionIndex];
@@ -254,6 +263,33 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       this.setRotation(0);
       this.updateHitbox();
     }
+  }
+
+  updateAttackTexture(delta) {
+    if (!this.visualConfig?.attackTexturePrefix) {
+      return;
+    }
+
+    const frameDuration = this.visualConfig.attackFrameDuration ?? 120;
+    const frameCount = this.visualConfig.attackFrameCount ?? 1;
+
+    this.attackFrameElapsed += delta;
+    while (this.attackFrameElapsed >= frameDuration) {
+      this.attackFrameElapsed -= frameDuration;
+      this.attackFrameIndex = Math.min(this.attackFrameIndex + 1, frameCount - 1);
+    }
+
+    const nextTexture = `${this.visualConfig.attackTexturePrefix}_${this.facingDirection}_${this.attackFrameIndex}`;
+    if (this.texture.key !== nextTexture) {
+      this.setTexture(nextTexture);
+      this.setRotation(0);
+      this.updateHitbox();
+    }
+  }
+
+  resetAttackAnimation() {
+    this.attackFrameIndex = 0;
+    this.attackFrameElapsed = 0;
   }
 
   applyEnemyTint(tint) {
@@ -348,16 +384,25 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   updateRangedBehavior(player, time) {
     const angleToPlayer = Phaser.Math.Angle.Between(this.x, this.y, player.x, player.y);
     const distance = Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y);
-    this.rotation = angleToPlayer;
+    const delta = this.scene.game.loop.delta;
+
+    if (this.visualConfig) {
+      this.updateFacingDirectionFromAngle(angleToPlayer);
+      this.setRotation(0);
+    } else {
+      this.rotation = angleToPlayer;
+    }
 
     if (this.windupUntil > 0) {
       this.setVelocity(0, 0);
       this.setTint(this.windupFlash ? 0xfff2b8 : 0xffc47a);
       this.windupFlash = !this.windupFlash;
+      this.updateAttackTexture(delta);
 
       if (time >= this.windupUntil) {
         this.windupUntil = 0;
         this.windupFlash = false;
+        this.resetAttackAnimation();
         this.refreshStatusTint(time);
         this.scene.fireEliteProjectile(this, angleToPlayer);
         this.nextShotAt = time + this.projectileCooldown;
@@ -370,20 +415,25 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       this.windupUntil = time + this.telegraphDuration;
       this.setVelocity(0, 0);
       this.setTint(0xfff2b8);
+      this.resetAttackAnimation();
+      this.updateAttackTexture(0);
       return;
     }
 
     if (distance > this.preferredRange) {
       this.scene.physics.moveToObject(this, player, this.moveSpeed * this.slowMultiplier);
+      this.updateMovementTexture(delta);
       return;
     }
 
     if (distance < this.minRange) {
       this.scene.physics.velocityFromRotation(angleToPlayer + Math.PI, this.moveSpeed * 0.9 * this.slowMultiplier, this.body.velocity);
+      this.updateMovementTexture(delta);
       return;
     }
 
     this.setVelocity(0, 0);
+    this.updateMovementTexture(delta);
   }
 
   applyChill(effect = {}, time = 0) {
