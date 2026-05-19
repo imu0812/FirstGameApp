@@ -33,8 +33,8 @@ const BACKGROUND_THEMES = {
     pattern: 'grid'
   },
   forest: {
-    baseColor: 0x213a31,
-    secondaryColor: 0x182d26,
+    baseColor: 0x2f523f,
+    secondaryColor: 0x244433,
     gridColor: 0xb4ffd2,
     gridAlpha: 0.026,
     ambientColor: 0xa8d8b7,
@@ -54,8 +54,8 @@ const BACKGROUND_THEMES = {
   }
 };
 
-const DEFAULT_BACKGROUND_THEME = 'dungeon';
-const BACKGROUND_THEME_TEXTURE_VERSION = 'bright_v1';
+const DEFAULT_BACKGROUND_THEME = 'forest';
+const BACKGROUND_THEME_TEXTURE_VERSION = 'bright_v2';
 
 const WEAPON_ROLE_SUMMARIES = {
   arc_bolt: { functionText: '定位:自瞄單體', suitability: '適性:新手/追擊/Boss' },
@@ -4632,7 +4632,6 @@ export class MainScene extends Phaser.Scene {
     });
   }
 }
-
 
 
 
